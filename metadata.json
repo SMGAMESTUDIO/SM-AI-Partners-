@@ -1,0 +1,7 @@
+{
+  "name": "SM AI Partner",
+  "description": "An educational AI assistant for students covering Math, Science, Islamiyat, and more with voice support.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
