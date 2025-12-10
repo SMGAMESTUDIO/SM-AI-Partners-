@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { Message, MessageRole } from '../types';
-import { Bot, User } from 'lucide-react';
+import { Bot, User, Volume2 } from 'lucide-react';
 
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
+  onSpeak: (text: string) => void;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, isLoading, onSpeak }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -48,14 +49,28 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
               {msg.role === MessageRole.USER ? <User size={18} /> : <Bot size={18} />}
             </div>
 
-            <div
-              className={`p-4 rounded-2xl shadow-sm whitespace-pre-wrap leading-relaxed ${
-                msg.role === MessageRole.USER
-                  ? 'bg-primary-600 text-white rounded-tr-none'
-                  : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-100 dark:border-gray-700'
-              }`}
-            >
-              {msg.text}
+            <div className="flex flex-col gap-1">
+              <div
+                className={`p-4 rounded-2xl shadow-sm whitespace-pre-wrap leading-relaxed ${
+                  msg.role === MessageRole.USER
+                    ? 'bg-primary-600 text-white rounded-tr-none'
+                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-100 dark:border-gray-700'
+                }`}
+              >
+                {msg.text}
+              </div>
+              
+              {/* Speaker Button for AI Messages */}
+              {msg.role === MessageRole.MODEL && (
+                <button 
+                  onClick={() => onSpeak(msg.text)}
+                  className="self-start p-1.5 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                  title="Listen to this response"
+                  aria-label="Speak response"
+                >
+                  <Volume2 size={16} />
+                </button>
+              )}
             </div>
           </div>
         </div>

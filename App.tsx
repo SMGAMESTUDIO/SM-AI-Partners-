@@ -52,11 +52,44 @@ const App: React.FC = () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     }
+  };
+
+  // --- Voice Output Logic (Text-to-Speech) ---
+  const speakResponse = (text: string) => {
+    if (!window.speechSynthesis) return;
+
+    // Cancel any currently playing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Detect Language: Check for Urdu/Arabic script characters range (0600-06FF)
+    // If found, assume Urdu/Sindhi. Otherwise assume English.
+    const hasUrduCharacters = /[\u0600-\u06FF]/.test(text);
+
+    if (hasUrduCharacters) {
+      // Try to find a voice that supports Urdu or Hindi
+      // Many browsers don't have a specific 'sd-PK' voice, but 'ur-PK' or 'hi-IN' often works well for the script.
+      utterance.lang = 'ur-PK';
+    } else {
+      utterance.lang = 'en-US';
+    }
+
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    window.speechSynthesis.speak(utterance);
   };
 
   // Chat Handling
   const handleSendMessage = async (text: string) => {
+    // Stop any current speech when user sends a new message
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
     const newUserMsg: Message = {
       id: Date.now().toString(),
       role: MessageRole.USER,
@@ -84,6 +117,10 @@ const App: React.FC = () => {
       };
 
       setMessages(prev => [...prev, newAiMsg]);
+      
+      // Auto-speak the AI response
+      speakResponse(responseText);
+
     } catch (error) {
       console.error("Failed to get response", error);
     } finally {
@@ -91,7 +128,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Voice Logic
+  // Voice Input Logic
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -102,11 +139,7 @@ const App: React.FC = () => {
       recognitionRef.current.interimResults = false;
       
       // Attempt to support multiple languages or auto-detect
-      // Note: Setting a specific lang helps accuracy. 
-      // For now, we default to 'ur-PK' (Urdu) as it often picks up Sindhi/Urdu better, 
-      // or 'en-US' mixed. Users might need to speak clearly.
-      // Ideally, we'd have a language selector, but for simplicity:
-      recognitionRef.current.lang = 'ur-PK'; // Defaulting to Urdu region for better Urdu/Sindhi support
+      recognitionRef.current.lang = 'ur-PK'; // Defaulting to Urdu region
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -132,6 +165,9 @@ const App: React.FC = () => {
       return;
     }
 
+    // Stop speaking if listening starts
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
     if (isListening) {
       recognitionRef.current.stop();
     } else {
@@ -145,7 +181,11 @@ const App: React.FC = () => {
       <Header isDark={isDark} toggleTheme={toggleTheme} onResetChat={handleResetChat} />
       
       <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto overflow-hidden">
-        <MessageList messages={messages} isLoading={isLoading} />
+        <MessageList 
+          messages={messages} 
+          isLoading={isLoading} 
+          onSpeak={speakResponse} 
+        />
         
         <div className="w-full">
           <TypewriterInput 
