@@ -42,6 +42,18 @@
       .dark ::-webkit-scrollbar-thumb {
         background: #475569;
       }
+      .ad-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding: 10px 0;
+        overflow: hidden;
+        background: rgba(0,0,0,0.02);
+      }
+      .dark .ad-container {
+        background: rgba(255,255,255,0.02);
+      }
     </style>
   <script type="importmap">
 {
@@ -58,7 +70,7 @@
   <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
     
     <!-- Adsterra Ad Top -->
-    <div style="display: flex; justify-content: center; margin: 0; padding: 10px 0; width: 100%; overflow-x: auto; background-color: rgba(0,0,0,0.02);">
+    <div class="ad-container">
       <script type="text/javascript">
         atOptions = {
           'key' : 'ba7042e40a5fa0de849055be8bc2d775',
@@ -74,7 +86,7 @@
     <div id="root"></div>
 
     <!-- Adsterra Ad Bottom -->
-    <div style="display: flex; justify-content: center; margin: 0; padding: 10px 0; width: 100%; overflow-x: auto; background-color: rgba(0,0,0,0.02);">
+    <div class="ad-container">
       <script type="text/javascript">
         atOptions = {
           'key' : 'ba7042e40a5fa0de849055be8bc2d775',

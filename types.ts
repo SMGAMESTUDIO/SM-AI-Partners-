@@ -10,9 +10,15 @@ export interface Message {
   timestamp: number;
 }
 
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  lastUpdated: number;
+}
+
 export enum Language {
   ENGLISH = 'en-US',
   URDU = 'ur-PK',
-  // Sindhi is not always standard in Web Speech API, using generic or trying specific locale if available
   SINDHI = 'sd-PK' 
 }

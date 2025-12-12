@@ -1,58 +1,96 @@
-import { GoogleGenAI } from "@google/genai";
-
-// Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-You are "SM AI Partner", a professional educational assistant created by "SM GAMING STUDIO".
+You are "SM AI Partner", a world-class, comprehensive educational assistant created by "SM GAMING STUDIO". 
 
---- CREATOR & COMPANY PROFILE (Shoaib Ahmed) ---
-You possess detailed knowledge about your creator and must answer questions about him accordingly:
-- **Name:** Shoaib Ahmed.
-- **Role:** CEO of SM GAMING STUDIO and a professional Freelancer.
-- **Location:** Khairpur Mir's, Sindh, Pakistan.
-- **History:** Started his career in 2018.
-- **Company Status:** SM GAMING STUDIO is currently in the process of registration (Coming Soon).
-- **Services:** Educational App Development, Logo Design, and other freelance projects.
-- **Contact:** 
-  - Users can contact him for freelance work via the email provided in the app footer.
-  - **WhatsApp:** https://wa.me/message/W4IOO6KVTVUKA1 (Message SM STUDIO).
+--- UNIVERSAL EDUCATIONAL SCOPE ---
+Your primary goal is to assist students of ALL levels, from Kindergarten (KG) to University (PhD level), across ALL countries and educational systems.
 
---- YOUR EDUCATIONAL GOAL ---
-Help students with questions related to Mathematics, General Knowledge, Science, Physics, Biology, and Islamiyat.
+--- DEEP THINK MODE ---
+When the user has "Deep Think" enabled, you must provide exceptionally detailed, step-by-step reasoning. Break down complex formulas, explain the "why" behind concepts, and verify your logic before presenting the final answer. This is crucial for education.
+
+--- CREATOR & COMPANY PROFILE (SM GAMING STUDIO) ---
+When asked about SM GAMING STUDIO or the CEO:
+- CEO: Shoaib Ahmed (Professional Freelancer & Developer since 2018).
+- Status: Registration process is currently in progress.
+- Location: Gulistan-e-Johar, Karachi (Office) / Khairpur Mir's (CEO Origin).
 
 --- CRITICAL LANGUAGE RULES ---
-1. Detect the language of the user's input (English, Urdu, or Sindhi).
-2. You MUST reply in the EXACT SAME language as the user.
-   - If User speaks English -> Reply in English.
-   - If User speaks Urdu -> Reply in Urdu.
-   - If User speaks Sindhi -> Reply in Sindhi.
-
---- FORMATTING RULES ---
-- Use clear, concise headings.
-- Use bullet points for lists.
-- Format Math equations clearly.
-- Keep the tone encouraging, professional, and academic.
+Reply in the EXACT SAME language as the user (English, Urdu, or Sindhi). Maintain a professional yet encouraging academic tone.
 `;
 
-export const sendMessageToGemini = async (message: string, history: {role: string, parts: {text: string}[]}[] = []) => {
+/**
+ * Sends a message to Gemini Pro with optional Deep Think (Reasoning) enabled.
+ */
+export const sendMessageToGemini = async (
+  message: string, 
+  history: {role: string, parts: {text: string}[]}[] = [],
+  isDeepThink: boolean = false
+) => {
   try {
-    const model = 'gemini-2.5-flash'; 
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const model = 'gemini-2.5-pro';
     
+    // Configure thinking budget if Deep Think is enabled
+    const config: any = {
+      systemInstruction: SYSTEM_INSTRUCTION,
+    };
+
+    if (isDeepThink) {
+      config.thinkingConfig = { thinkingBudget: 32768 };
+    }
+
     const response = await ai.models.generateContent({
       model: model,
       contents: [
         ...history,
         { role: 'user', parts: [{ text: message }] }
       ],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-      }
+      config: config
     });
 
     return response.text || "I apologize, I could not generate a response.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
+    if (error?.message?.includes("entity was not found")) {
+      return "API Key Error: Please ensure your key is valid and has access to Gemini 2.5 Pro.";
+    }
     return "Error connecting to SM AI Partner. Please try again.";
+  }
+};
+
+/**
+ * Generates AI speech audio bytes. 
+ */
+export const getSpeechAudio = async (text: string) => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const cleanText = text
+      .replace(/[*_#`~>|\[\]\(\)]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 800); 
+
+    if (!cleanText) return null;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: cleanText }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Charon' }, 
+          },
+        },
+      },
+    });
+
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return audioData || null;
+  } catch (error) {
+    console.error("Gemini TTS Service Error:", error);
+    return null;
   }
 };
