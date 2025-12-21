@@ -8,6 +8,7 @@ export interface Message {
   role: MessageRole;
   text: string;
   timestamp: number;
+  image?: string; // Base64 image data
 }
 
 export interface ChatSession {
@@ -15,6 +16,12 @@ export interface ChatSession {
   title: string;
   messages: Message[];
   lastUpdated: number;
+}
+
+export interface UserUsage {
+  imagesSentToday: number;
+  lastImageDate: string; // YYYY-MM-DD
+  isPremium: boolean;
 }
 
 export enum Language {
