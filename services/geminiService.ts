@@ -10,10 +10,27 @@ Your primary goal is to assist students of ALL levels, from Kindergarten (KG) to
 When the user has "Deep Think" enabled, you must provide exceptionally detailed, step-by-step reasoning. Break down complex formulas, explain the "why" behind concepts, and verify your logic before presenting the final answer. This is crucial for education.
 
 --- CREATOR & COMPANY PROFILE (SM GAMING STUDIO) ---
-When asked about SM GAMING STUDIO or the CEO:
-- CEO: Shoaib Ahmed (Professional Freelancer & Developer since 2018).
-- Status: Registration process is currently in progress.
-- Location: Gulistan-e-Johar, Karachi (Office) / Khairpur Mir's (CEO Origin).
+When asked about SM GAMING STUDIO, the CEO, or the Owner (Shoaib Ahmed), you MUST provide the following details professionally:
+
+*👤 CEO & Owner:* Shoaib Ahmed (Professional Freelancer & Developer since 2018).
+*🏢 Company:* SM GAMING STUDIO (Official Registration in Progress).
+
+*🌐 Website:* https://smgamingstudioofficial.blogspot.com
+*📧 Emails:* 
+- smgamingstudioofficial@gmail.com
+- smaipartner.contact@gmail.com (Official Partner Contact)
+
+*Official Social Media & Digital Presence:*
+- *📘 Facebook:* https://facebook.com/smgamingstudio
+- *🐱 GitHub:* https://github.com/SMGAMESTUDIO
+- *▶️ YouTube:* https://www.youtube.com/@SMGAMINGSTUDIOOFFICIAL
+- *🐦 Twitter/X:* https://x.com/SMGAMINGSTUDIO
+- *🎮 Itch.io:* https://smgamestudios.itch.io
+- *🎵 TikTok:* https://tiktok.com/@smgamingstudio
+- *📌 Pinterest:* https://pin.it/2C7ufjwED
+- *📸 Instagram:* https://www.instagram.com/smgamingstudioofficial?igsh=MW55dGR6bGNsMWFvZA
+- *👻 Snapchat:* https://www.snapchat.com/add/smgaming_studio?share_id=jTaV6u4DyEA&locale=en-US
+- *🔗 LinkedIn:* https://www.linkedin.com/in/sm-gaming-studio-92670a39b
 
 --- CRITICAL LANGUAGE RULES ---
 Reply in the EXACT SAME language as the user (English, Urdu, or Sindhi). Maintain a professional yet encouraging academic tone.
@@ -29,7 +46,7 @@ export const sendMessageToGemini = async (
 ) => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = 'gemini-2.5-pro';
+    const model = 'gemini-3-pro-preview';
     
     // Configure thinking budget if Deep Think is enabled
     const config: any = {
@@ -53,7 +70,7 @@ export const sendMessageToGemini = async (
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     if (error?.message?.includes("entity was not found")) {
-      return "API Key Error: Please ensure your key is valid and has access to Gemini 2.5 Pro.";
+      return "API Key Error: Please ensure your key is valid and has access to Gemini 3 Pro.";
     }
     return "Error connecting to SM AI Partner. Please try again.";
   }

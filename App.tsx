@@ -52,23 +52,19 @@ const App: React.FC = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   
-  // Audio state
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
-    // Theme
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     }
 
-    // Preferences
     setIsAutoSpeech(localStorage.getItem(AUTO_SPEECH_KEY) !== 'false');
     setIsDeepThink(localStorage.getItem(DEEP_THINK_KEY) === 'true');
 
-    // Sessions
     const savedSessions = localStorage.getItem(STORAGE_KEY);
     if (savedSessions) {
       try {
