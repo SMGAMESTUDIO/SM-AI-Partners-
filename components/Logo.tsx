@@ -7,7 +7,10 @@ interface LogoProps {
 
 const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
   return (
-    <div className={`relative flex flex-col items-center justify-center ${className}`} style={{ width: size, height: size }}>
+    <div 
+      className={`relative flex items-center justify-center transition-all duration-300 ${className}`} 
+      style={{ width: size, height: size }}
+    >
       <svg
         viewBox="0 0 200 200"
         fill="none"
@@ -15,76 +18,67 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
         className="w-full h-full"
       >
         <defs>
-          <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="smGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ec4899" /> {/* Pink */}
-            <stop offset="100%" stopColor="#06b6d4" /> {/* Cyan/Blue */}
+            <stop offset="100%" stopColor="#60a5fa" /> {/* Light Blue */}
           </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+          <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
           </filter>
         </defs>
 
-        {/* Atomic Orbits */}
-        <ellipse
-          cx="100"
-          cy="100"
-          rx="80"
-          ry="35"
-          stroke="url(#logoGradient)"
-          strokeWidth="3"
-          transform="rotate(0 100 100)"
-          className="opacity-80"
-        />
-        <ellipse
-          cx="100"
-          cy="100"
-          rx="80"
-          ry="35"
-          stroke="url(#logoGradient)"
-          strokeWidth="3"
-          transform="rotate(60 100 100)"
-          className="opacity-80"
-        />
-        <ellipse
-          cx="100"
-          cy="100"
-          rx="80"
-          ry="35"
-          stroke="url(#logoGradient)"
-          strokeWidth="3"
-          transform="rotate(120 100 100)"
-          className="opacity-80"
-        />
+        {/* Orbitals - High Fidelity Match to User Image */}
+        <g filter="url(#logoShadow)">
+          {/* Orbit 1 */}
+          <ellipse 
+            cx="100" cy="100" rx="85" ry="36" 
+            stroke="url(#smGrad)" strokeWidth="3.5" 
+            transform="rotate(-60 100 100)" 
+            opacity="0.9"
+          />
+          <circle cx="142" cy="26" r="7" fill="#60a5fa" />
+          <circle cx="58" cy="174" r="7" fill="#ec4899" />
 
-        {/* Electrons/Dots */}
-        <circle cx="20" cy="100" r="6" fill="#ec4899" />
-        <circle cx="180" cy="100" r="6" fill="#06b6d4" />
-        <circle cx="140" cy="35" r="6" fill="#06b6d4" />
-        <circle cx="60" cy="165" r="6" fill="#ec4899" />
+          {/* Orbit 2 */}
+          <ellipse 
+            cx="100" cy="100" rx="85" ry="36" 
+            stroke="url(#smGrad)" strokeWidth="3.5" 
+            transform="rotate(60 100 100)" 
+            opacity="0.9"
+          />
+          <circle cx="142" cy="174" r="7" fill="#60a5fa" />
+          <circle cx="58" cy="26" r="7" fill="#ec4899" />
 
-        {/* Central Circle with Graduation Cap */}
-        <circle cx="100" cy="100" r="28" fill="url(#logoGradient)" className="opacity-20" />
-        <circle cx="100" cy="100" r="25" stroke="url(#logoGradient)" strokeWidth="2" />
+          {/* Orbit 3 */}
+          <ellipse 
+            cx="100" cy="100" rx="85" ry="36" 
+            stroke="url(#smGrad)" strokeWidth="3.5" 
+            opacity="0.9"
+          />
+          <circle cx="185" cy="100" r="7" fill="#60a5fa" />
+          <circle cx="15" cy="100" r="7" fill="#ec4899" />
+        </g>
+
+        {/* Center Nucleus with Mortarboard */}
+        <circle cx="100" cy="100" r="32" fill="url(#smGrad)" />
         
-        {/* Simple Graduation Cap Icon */}
-        <path
-          d="M100 85L75 95L100 105L125 95L100 85Z"
-          fill="url(#logoGradient)"
+        {/* White Mortarboard Icon */}
+        <path 
+          d="M100 82L70 96L100 110L130 96L100 82Z" 
+          fill="white" 
         />
-        <path
-          d="M82 98V108C82 108 85 112 100 112C115 112 118 108 118 108V98"
-          stroke="url(#logoGradient)"
-          strokeWidth="3"
+        <path 
+          d="M82 103V116C82 116 88 122 100 122C112 122 118 116 118 116V103" 
+          stroke="white" 
+          strokeWidth="3.5" 
+          strokeLinecap="round" 
+          fill="none"
+        />
+        <path 
+          d="M130 96V110" 
+          stroke="white" 
+          strokeWidth="2.5" 
           strokeLinecap="round"
-        />
-        <path
-          d="M125 95V108"
-          stroke="url(#logoGradient)"
-          strokeWidth="2"
         />
       </svg>
     </div>
