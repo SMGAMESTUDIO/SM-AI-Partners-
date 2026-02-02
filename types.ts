@@ -20,6 +20,7 @@ export interface ChatSession {
 
 export interface UserUsage {
   imagesSentToday: number;
+  imagesGeneratedToday: number;
   lastImageDate: string; // YYYY-MM-DD
   isPremium: boolean;
 }
