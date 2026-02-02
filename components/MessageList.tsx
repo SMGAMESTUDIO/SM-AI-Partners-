@@ -1,10 +1,8 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Message, MessageRole } from '../types';
 import { 
-  User, Volume2, VolumeX, Copy, Check, RotateCcw, Terminal, Sparkles,
-  Globe, Mail, Facebook, Github, Youtube, Twitter, Instagram, 
-  Linkedin, ExternalLink, Gamepad2, Pi, Music2, Ghost,
-  ChevronRight
+  User, Volume2, VolumeX, Copy, Check, RotateCcw
 } from 'lucide-react';
 import Logo from './Logo';
 
@@ -15,6 +13,7 @@ interface MessageListProps {
   onStopSpeak: () => void;
   playingMessageId: string | null;
   onRegenerate: () => void;
+  onSendMessage: (text: string) => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({ 
@@ -23,10 +22,12 @@ const MessageList: React.FC<MessageListProps> = ({
   onSpeak, 
   onStopSpeak,
   playingMessageId,
-  onRegenerate
+  onRegenerate,
+  onSendMessage
 }) => {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,26 +39,10 @@ const MessageList: React.FC<MessageListProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getBrandIcon = (url: string) => {
-    const u = url.toLowerCase();
-    if (u.includes('facebook')) return <Facebook size={18} className="text-[#1877F2]" />;
-    if (u.includes('github')) return <Github size={18} className="text-[#181717] dark:text-white" />;
-    if (u.includes('youtube')) return <Youtube size={18} className="text-[#FF0000]" />;
-    if (u.includes('twitter') || u.includes('x.com')) return <Twitter size={18} className="text-[#1DA1F2]" />;
-    if (u.includes('instagram')) return <Instagram size={18} className="text-[#E4405F]" />;
-    if (u.includes('linkedin')) return <Linkedin size={18} className="text-[#0A66C2]" />;
-    if (u.includes('tiktok')) return <Music2 size={18} className="text-[#000000] dark:text-white" />;
-    if (u.includes('snapchat')) return <Ghost size={18} className="text-[#FFFC00]" />;
-    if (u.includes('pinterest')) return <Pi size={18} className="text-[#BD081C]" />;
-    if (u.includes('itch.io')) return <Gamepad2 size={18} className="text-[#FA5C5C]" />;
-    if (u.includes('blogspot')) return <Globe size={18} className="text-[#FF5722]" />;
-    return <Globe size={18} className="text-blue-500" />;
-  };
-
   const renderFormattedText = (text: string) => {
     let parts: React.ReactNode[] = text.split(/(`[^`]+`)/g).map((part, i) => {
       if (typeof part === 'string' && part.startsWith('`') && part.endsWith('`')) {
-        return <code key={`ic-${i}`} className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[0.9em] text-pink-600 dark:text-pink-400">{part.slice(1, -1)}</code>;
+        return <code key={`ic-${i}`} className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 font-mono text-[0.9em] text-blue-600 dark:text-blue-400">{part.slice(1, -1)}</code>;
       }
       return part;
     });
@@ -72,189 +57,76 @@ const MessageList: React.FC<MessageListProps> = ({
       });
     });
 
-    parts = parts.flatMap((part) => {
-      if (typeof part !== 'string') return part;
-      return part.split(/(\*[^*]+\*)/g).map((subPart, i) => {
-        if (subPart.startsWith('*') && subPart.endsWith('*') && !subPart.startsWith('**')) {
-          return <em key={`i-${i}`} className="italic opacity-90">{subPart.slice(1, -1)}</em>;
-        }
-        return subPart;
-      });
-    });
-
     return parts;
   };
 
-  const formatMessageContent = (text: string, isAiGenerating: boolean) => {
-    if (!text && isAiGenerating) return null;
-    const segments = text.split(/(```[\s\S]*?```)/g);
-    
-    return segments.map((segment, sIdx) => {
-      if (segment.startsWith('```') && segment.endsWith('```')) {
-        const fullContent = segment.slice(3, -3).trim();
-        const firstLineBreak = fullContent.indexOf('\n');
-        const language = firstLineBreak !== -1 ? fullContent.slice(0, firstLineBreak).trim() : 'code';
-        const code = firstLineBreak !== -1 ? fullContent.slice(firstLineBreak + 1).trim() : fullContent;
-        const isCodeCopied = copiedId === `code-${sIdx}`;
-
-        return (
-          <div key={`cb-${sIdx}`} className="my-6 rounded-2xl overflow-hidden bg-gray-950 border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-            <div className="bg-gray-900/80 backdrop-blur-md px-5 py-3 flex justify-between items-center border-b border-white/5">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                  <Terminal size={14} className="text-blue-400" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{language || 'terminal'}</span>
-              </div>
-              <button 
-                onClick={() => handleCopy(code, `code-${sIdx}`)} 
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  isCodeCopied 
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
-                }`}
-              >
-                {isCodeCopied ? <><Check size={12} className="text-green-500" /><span>Copied!</span></> : <><Copy size={12} /><span>Copy Code</span></>}
-              </button>
-            </div>
-            <div className="p-5 overflow-x-auto custom-scrollbar">
-              <pre className="text-xs md:text-sm font-mono leading-relaxed text-gray-300"><code>{code}</code></pre>
-            </div>
-          </div>
-        );
-      }
-
-      const lines = segment.split('\n');
-      return (
-        <div key={`txt-${sIdx}`} className="space-y-3">
-          {lines.map((line, lIdx) => {
-            if (!line.trim()) return <div key={`br-${lIdx}`} className="h-1" />;
-            const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
-            const hasLinks = line.match(linkRegex);
-
-            if (hasLinks && (line.trim().startsWith('- ') || line.trim().startsWith('* ') || line.trim().length < 100)) {
-               const linkMatch = Array.from(line.matchAll(linkRegex))[0];
-               const name = linkMatch[1];
-               const url = linkMatch[2];
-               return (
-                 <a 
-                   key={`link-${lIdx}`}
-                   href={url} target="_blank" rel="noopener noreferrer"
-                   className="group relative flex items-center justify-between p-4 my-2 bg-white dark:bg-gray-800/60 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl hover:border-blue-500 dark:hover:border-blue-400 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
-                 >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 translate-x-[-100%] group-hover:animate-shimmer" />
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="p-3 bg-gray-100 dark:bg-gray-700/50 rounded-xl group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 transition-colors">
-                        {getBrandIcon(url)}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 opacity-60">Official Link</span>
-                        <span className="text-sm font-black text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{name}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 relative z-10 bg-gray-100 dark:bg-gray-700/50 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                      Visit <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                 </a>
-               );
-            }
-
-            if (line.startsWith('### ')) {
-              return (
-                <h3 key={`h3-${lIdx}`} className="text-sm font-black uppercase tracking-[0.3em] text-blue-700 dark:text-blue-400 pt-6 pb-2 border-b border-blue-500/10 flex items-center gap-2">
-                  <Sparkles size={14} /> {line.slice(4)}
-                </h3>
-              );
-            }
-
-            if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-              return (
-                <div key={`li-${lIdx}`} className="flex gap-3 pl-2">
-                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                  <span className="flex-1 text-gray-900 dark:text-gray-200 font-medium">{renderFormattedText(line.trim().slice(2))}</span>
-                </div>
-              );
-            }
-
-            return (
-              <p key={`p-${lIdx}`} className="text-gray-900 dark:text-gray-200">
-                {renderFormattedText(line)}
-                {isAiGenerating && sIdx === segments.length - 1 && lIdx === lines.length - 1 && (
-                  <span className="inline-block w-1.5 h-4 bg-blue-500 animate-pulse align-middle ml-1 rounded-full" />
-                )}
-              </p>
-            );
-          })}
-        </div>
-      );
-    });
-  };
-
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-12 scroll-smooth custom-scrollbar">
+    <div 
+      ref={containerRef}
+      className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-8 scroll-smooth custom-scrollbar w-full overscroll-contain"
+    >
       {messages.length === 0 && (
-        <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-700">
-           <Logo size={140} className="mb-6 drop-shadow-2xl" />
-           <h2 className="text-2xl md:text-4xl font-black mb-2 tracking-tighter">
+        <div className="min-h-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-1000">
+           <Logo size={100} className="mb-6 drop-shadow-2xl" />
+           <h2 className="text-3xl md:text-5xl font-black mb-2 tracking-tighter">
             <span className="text-blue-600">SM</span>
             <span className="text-pink-500">AI</span>
             <span className="text-gray-900 dark:text-gray-100"> PARTNER</span>
           </h2>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-[0.5em] max-w-xs mx-auto">Advancing Education with Professional AI Assistance</p>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.6em] mb-4">Empowering Students with Intelligence</p>
+          <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-pink-500 rounded-full opacity-50"></div>
+          <p className="mt-8 text-sm text-gray-500 dark:text-gray-400 max-w-md leading-relaxed">
+            Your professional educational companion for Math, Science, Coding, and general studies. How can I assist your learning today?
+          </p>
         </div>
       )}
 
       {messages.map((msg, idx) => {
         const isLastMessage = idx === messages.length - 1;
         const isAiGenerating = msg.role === MessageRole.MODEL && isLastMessage && isLoading;
-        const isMessageCopied = copiedId === msg.id;
 
         return (
           <div key={msg.id} className={`flex w-full animate-in fade-in slide-in-from-bottom-4 duration-500 ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
-            <div className={`flex max-w-[95%] md:max-w-[85%] gap-4 ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div className={`flex max-w-[95%] md:max-w-[85%] gap-3 ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className="flex-shrink-0 mt-1">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-300 ${
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border shadow-sm transition-all ${
                   msg.role === MessageRole.USER 
-                    ? 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 shadow-sm' 
-                    : 'bg-white border-transparent hover:scale-110'
+                    ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700' 
+                    : 'bg-white border-transparent'
                 }`}>
-                  {msg.role === MessageRole.USER ? <User size={18} className="text-gray-500" /> : <Logo size={32} />}
+                  {msg.role === MessageRole.USER ? <User size={20} className="text-gray-400" /> : <Logo size={36} />}
                 </div>
               </div>
-              <div className="flex flex-col gap-2 group min-w-0">
+              <div className="flex flex-col gap-2 min-w-0">
                 {msg.image && (
-                  <div className="relative group/img overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg mb-2">
-                    <img src={msg.image} alt="Upload" className="max-w-sm w-full object-cover transition-transform group-hover/img:scale-105 duration-500" />
+                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md mb-2 overflow-hidden bg-gray-50 dark:bg-gray-900">
+                    <img src={msg.image} alt="Upload" className="max-w-xs md:max-w-md w-full h-auto" />
                   </div>
                 )}
                 <div className={`${msg.role === MessageRole.USER ? 'text-right' : 'text-left'}`}>
-                  <div className={`inline-block text-sm md:text-[15.5px] leading-relaxed break-words transition-all ${
+                  <div className={`inline-block text-[15px] leading-relaxed break-words px-5 py-3 rounded-2xl shadow-sm ${
                     msg.role === MessageRole.USER 
-                      ? 'bg-blue-600 text-white px-5 py-3 rounded-2xl rounded-tr-none shadow-md' 
-                      : 'bg-gray-50 dark:bg-transparent dark:text-gray-200 px-5 py-3 md:px-0 md:py-1 rounded-2xl md:rounded-none'
+                      ? 'bg-blue-600 text-white rounded-tr-none' 
+                      : 'bg-gray-100 dark:bg-gray-800/60 dark:text-gray-200 rounded-tl-none'
                   }`}>
-                    {formatMessageContent(msg.text, isAiGenerating)}
+                    <div className="space-y-3">
+                      {msg.text.split('\n').map((line, l) => (
+                        <p key={l}>{renderFormattedText(line)}</p>
+                      ))}
+                      {isAiGenerating && <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse align-middle ml-1 rounded-full" />}
+                    </div>
                   </div>
                 </div>
                 
                 {msg.role === MessageRole.MODEL && !isAiGenerating && (
-                  <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-                    <button 
-                      onClick={() => handleCopy(msg.text, msg.id)} 
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                        isMessageCopied 
-                          ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' 
-                          : 'bg-gray-100 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                      }`}
-                    >
-                      {isMessageCopied ? <><Check size={14} className="text-green-600" /><span>Copied</span></> : <><Copy size={14} /><span>Copy Response</span></>}
+                  <div className="flex items-center gap-2 mt-1 opacity-60 hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
+                      {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                     </button>
-                    <button onClick={() => onSpeak(msg.text, msg.id)} className={`p-2 rounded-xl transition-all ${playingMessageId === msg.id ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      {playingMessageId === msg.id ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                    <button onClick={() => onSpeak(msg.text, msg.id)} className={`p-2 rounded-xl transition-all ${playingMessageId === msg.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}>
+                      {playingMessageId === msg.id ? <VolumeX size={14} /> : <Volume2 size={14} />}
                     </button>
-                    {isLastMessage && (
-                      <button onClick={onRegenerate} className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"><RotateCcw size={16} /></button>
-                    )}
+                    {isLastMessage && <button onClick={onRegenerate} className="p-2 hover:bg-gray-100 rounded-xl transition-all"><RotateCcw size={14} /></button>}
                   </div>
                 )}
               </div>
@@ -262,42 +134,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         );
       })}
-      
-      {isLoading && messages.length > 0 && messages[messages.length-1].role === MessageRole.USER && (
-        <div className="flex justify-start w-full animate-in fade-in slide-in-from-left-4 duration-500">
-          <div className="flex gap-4 items-start relative">
-            <div className="relative w-9 h-9 rounded-xl flex items-center justify-center border bg-white border-transparent flex-shrink-0 mt-1 shadow-md overflow-hidden">
-              <div className="absolute inset-0 bg-blue-500/10 animate-ping rounded-full scale-150" />
-              <Logo size={32} className="animate-spin-slow relative z-10" />
-            </div>
-            <div className="flex flex-col gap-2 py-1.5">
-              <div className="relative group overflow-hidden flex items-center gap-3 px-5 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-blue-500/5 to-transparent animate-shimmer" />
-                <div className="flex gap-1.5 relative z-10">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="w-1.5 h-1.5 bg-pink-600 rounded-full animate-bounce"></span>
-                </div>
-                <div className="flex flex-col relative z-10">
-                   <div className="flex items-center gap-1.5">
-                     <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 tracking-[0.2em] uppercase">Thinking...</span>
-                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      <div ref={messagesEndRef} className="h-32" />
-      <style>{`
-        .animate-spin-slow { animation: spin 8s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes shimmer { 100% { transform: translateX(100%); } }
-        .animate-shimmer { animation: shimmer 2s infinite ease-in-out; }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 20px; }
-      `}</style>
+      <div ref={messagesEndRef} className="h-4 w-full" />
     </div>
   );
 };
