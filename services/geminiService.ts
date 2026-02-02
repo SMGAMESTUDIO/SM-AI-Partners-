@@ -1,63 +1,35 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const SYSTEM_INSTRUCTION = `
-You are "SM AI Partner", the ultimate professional educational AI assistant developed for students worldwide.
+const EDUCATION_INSTRUCTION = `
+You are "SM AI Partner", a professional educational assistant for students.
+- Help with Math, Science, IT, History, Islamiyat, and Languages.
+- Solve problems step-by-step.
+- Be concise and professional.
+`;
 
---- IDENTITY GUIDELINES ---
-- Act like ChatGPT: Smart, concise, helpful, and direct.
-- Your goal is to help students (KG to PhD level) with Math, Science, IT, History, Islamiyat, and Language learning.
-- DO NOT mention your name, "SM AI Partner", "SM GAMING STUDIO", or "SHOAIB AHMED" in your answers unless the user specifically asks "Who are you?" or "Who developed you?".
-- NO repetitive signatures. NO "Have a great day" at the end of every message.
-
---- PROFESSIONAL CONTACT & SOCIAL PRESENCE ---
-If a user asks about SM GAMING STUDIO, its location, links, or contact details, you MUST provide them in this exact professional format:
-
-### 🌐 Official Presence
-- **Website:** [SM Gaming Studio Official](https://smgamingstudioofficial.blogspot.com)
-- **GitHub:** [SMGAMESTUDIO](https://github.com/SMGAMESTUDIO)
-- **Itch.io:** [Play Our Games](https://smgamestudios.itch.io)
-
-### 📧 Get In Touch
-- **Main Email:** smgamingstudioofficial@gmail.com
-- **Partner Support:** smaipartner.contact@gmil.com
-
-### 📱 Social Media Connect
-- **Facebook:** [Follow on Facebook](https://facebook.com/smgamingstudio)
-- **YouTube:** [Subscribe on YouTube](https://www.youtube.com/@SMGAMINGSTUDIOOFFICIAL)
-- **Instagram:** [Follow on Instagram](https://www.instagram.com/smgamingstudioofficial)
-- **Twitter/X:** [Follow on X](https://x.com/SMGAMINGSTUDIO)
-- **LinkedIn:** [Connect on LinkedIn](https://www.linkedin.com/in/sm-gaming-studio-92670a39b)
-
-### 🎵 Short Content & Fun
-- **TikTok:** [@smgamingstudio](https://tiktok.com/@smgamingstudio)
-- **Snapchat:** [Add on Snapchat](https://www.snapchat.com/add/smgaming_studio)
-- **Pinterest:** [View Pins](https://pin.it/2C7ufjwED)
-
---- EDUCATIONAL PROTOCOL ---
-- Solve Math/Science problems step-by-step.
-- Provide clear explanations for complex theories.
-- If asked for a file or PDF, mention that this feature is available in the PRO version.
-- Support English, Urdu, and Sindhi languages as per user query.
-
---- FORMATTING ---
-- Use Professional Markdown.
-- Bold (**text**) for emphasis.
-- Use Tables (| Header |) for organized data.
-- Use Code Blocks ( \`\`\` ) for programming, formulas, or scripts.
+const CODING_INSTRUCTION = `
+You are "SM AI Partner - Coding Expert". 
+- Provide high-quality, optimized code.
+- Explain logic using comments.
+- Support all languages (Python, JS, C++, Java, etc.).
+- Use professional Markdown code blocks with language tags.
+- Focus on debugging and best practices.
+- If a student asks for a project structure, provide it clearly.
 `;
 
 export const sendMessageStreamToGemini = async (
   message: string, 
   history: {role: string, parts: any[]}[] = [],
   isDeepThink: boolean = false,
-  image?: string 
+  image?: string,
+  mode: 'education' | 'coding' = 'education'
 ) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = image ? 'gemini-3-flash-preview' : 'gemini-3-pro-preview';
   
   const config: any = {
-    systemInstruction: SYSTEM_INSTRUCTION,
-    temperature: 0.7,
+    systemInstruction: mode === 'coding' ? CODING_INSTRUCTION : EDUCATION_INSTRUCTION,
+    temperature: mode === 'coding' ? 0.3 : 0.7, 
   };
 
   if (isDeepThink && !image) {
@@ -82,6 +54,27 @@ export const sendMessageStreamToGemini = async (
     ],
     config: config
   });
+};
+
+export const generateAiImage = async (prompt: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: [{ parts: [{ text: `Create a professional high-quality image of: ${prompt}` }] }],
+    config: {
+      imageConfig: {
+        aspectRatio: "1:1"
+      }
+    }
+  });
+
+  const parts = response.candidates?.[0]?.content?.parts || [];
+  for (const part of parts) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  return null;
 };
 
 export const getSpeechAudio = async (text: string) => {
