@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -8,7 +9,7 @@ import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
 import { sendMessageStreamToGemini, getSpeechAudio, generateAiImage } from './services/geminiService';
 import { Message, MessageRole, ChatSession, UserUsage } from './types';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle, X, Key } from 'lucide-react';
 
 const STORAGE_KEY = 'sm-ai-partner-sessions-v3';
 const USAGE_KEY = 'sm-ai-usage-v3';
@@ -217,8 +218,11 @@ const App: React.FC = () => {
       if (isAutoSpeech && !abortControllerRef.current) speakResponse(accumulatedText, aiMsgId);
     } catch (error: any) { 
       console.error("App Error:", error);
-      setApiError(error.message || "I encountered an issue connecting to the AI.");
-      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.text !== "" || m.role === 'user') } : s));
+      const isKeyError = error.message?.toLowerCase().includes("key") || error.message?.toLowerCase().includes("browser");
+      setApiError(isKeyError 
+        ? "API Key Issue: If you just added the key in Vercel, please wait 2 minutes and REDEPLOY your project from the Vercel Dashboard." 
+        : (error.message || "Connection error."));
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.role === 'user' || (m.role === 'model' && m.text !== "")) } : s));
     } finally { 
       setIsLoading(false); 
     }
@@ -275,12 +279,32 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col relative overflow-hidden h-full touch-auto">
         {apiError && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md animate-in slide-in-from-top-4 duration-300">
-            <div className="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-800 p-4 rounded-2xl flex flex-col gap-2 shadow-xl backdrop-blur-md">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="text-red-500 shrink-0" size={20} />
-                <p className="text-sm font-bold text-red-700 dark:text-red-200 flex-1 leading-tight">{apiError}</p>
-                <button onClick={() => setApiError(null)} className="p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded-lg"><X size={16} /></button>
+            <div className="bg-white dark:bg-gray-900 border border-red-500/50 p-5 rounded-3xl flex flex-col gap-3 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl text-red-600 shrink-0">
+                  <AlertCircle size={24} />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Technical Issue</h3>
+                  <p className="text-[13px] font-medium text-gray-500 dark:text-gray-400 leading-tight">{apiError}</p>
+                </div>
+                <button onClick={() => setApiError(null)} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                  <X size={20} />
+                </button>
               </div>
+              
+              {apiError.includes("REDEPLOY") && (
+                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Key size={14} className="text-blue-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">Vercel Guide</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300">
+                    Go to <span className="underline italic">Deployments</span> > click <span className="italic">...</span> > <span className="font-black italic">Redeploy</span>. 
+                    This is necessary to inject the key into the website.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

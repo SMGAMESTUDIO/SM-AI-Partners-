@@ -23,7 +23,7 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  // Directly initializing with the required pattern for automatic injection
+  // Use a fresh instance with the environment key as strictly required
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
@@ -64,7 +64,7 @@ export const sendMessageStreamToGemini = async (
     });
   } catch (err: any) {
     console.error("Gemini Connection Error:", err);
-    throw new Error(err.message || "Connection error. Please check your API key in Vercel.");
+    throw new Error(err.message || "Connection failed. Please check your environment configuration.");
   }
 };
 
