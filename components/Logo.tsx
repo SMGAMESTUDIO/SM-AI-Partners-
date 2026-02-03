@@ -5,7 +5,7 @@ interface LogoProps {
   size?: number;
 }
 
-const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
+export const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
   return (
     <div 
       className={`relative flex items-center justify-center transition-all duration-300 ${className}`} 
@@ -19,17 +19,15 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
       >
         <defs>
           <linearGradient id="smGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ec4899" /> {/* Pink */}
-            <stop offset="100%" stopColor="#60a5fa" /> {/* Light Blue */}
+            <stop offset="0%" stopColor="#ec4899" />
+            <stop offset="100%" stopColor="#60a5fa" />
           </linearGradient>
           <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
           </filter>
         </defs>
 
-        {/* Orbitals - High Fidelity Match to User Image */}
         <g filter="url(#logoShadow)">
-          {/* Orbit 1 */}
           <ellipse 
             cx="100" cy="100" rx="85" ry="36" 
             stroke="url(#smGrad)" strokeWidth="3.5" 
@@ -39,7 +37,6 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
           <circle cx="142" cy="26" r="7" fill="#60a5fa" />
           <circle cx="58" cy="174" r="7" fill="#ec4899" />
 
-          {/* Orbit 2 */}
           <ellipse 
             cx="100" cy="100" rx="85" ry="36" 
             stroke="url(#smGrad)" strokeWidth="3.5" 
@@ -49,7 +46,6 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
           <circle cx="142" cy="174" r="7" fill="#60a5fa" />
           <circle cx="58" cy="26" r="7" fill="#ec4899" />
 
-          {/* Orbit 3 */}
           <ellipse 
             cx="100" cy="100" rx="85" ry="36" 
             stroke="url(#smGrad)" strokeWidth="3.5" 
@@ -59,10 +55,8 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
           <circle cx="15" cy="100" r="7" fill="#ec4899" />
         </g>
 
-        {/* Center Nucleus with Mortarboard */}
         <circle cx="100" cy="100" r="32" fill="url(#smGrad)" />
         
-        {/* White Mortarboard Icon */}
         <path 
           d="M100 82L70 96L100 110L130 96L100 82Z" 
           fill="white" 
@@ -84,5 +78,3 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
     </div>
   );
 };
-
-export default Logo;

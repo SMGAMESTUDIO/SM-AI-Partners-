@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Header from './components/Header';
+import { Header } from './components/Header';
 import Footer from './components/Footer';
 import MessageList from './components/MessageList';
 import TypewriterInput from './components/TypewriterInput';
@@ -177,7 +177,6 @@ const App: React.FC = () => {
 
     const newUserMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
     
-    // Preparation for API: Get history *before* adding the new message to state to be safe
     const sessionToUse = sessions.find(s => s.id === activeSessionId);
     const historyBeforeNewMsg = (sessionToUse?.messages || [])
       .filter(m => m.text.trim() !== "" || m.image)
@@ -192,7 +191,6 @@ const App: React.FC = () => {
     if (!isRegenerate) {
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, newUserMsg], lastUpdated: Date.now() } : s));
     } else {
-      // For regeneration, we use the messages minus the very last AI one
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.slice(0, -1) } : s));
     }
     
@@ -219,8 +217,7 @@ const App: React.FC = () => {
       if (isAutoSpeech && !abortControllerRef.current) speakResponse(accumulatedText, aiMsgId);
     } catch (error: any) { 
       console.error("App Error:", error);
-      setApiError(error.message || "I encountered an issue connecting to the AI. Check your API key in Vercel settings.");
-      // Remove the failed AI message
+      setApiError(error.message || "I encountered an issue connecting to the AI.");
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.text !== "" || m.role === 'user') } : s));
     } finally { 
       setIsLoading(false); 
@@ -244,7 +241,7 @@ const App: React.FC = () => {
         const aiMsg: Message = { id: Date.now().toString(), role: MessageRole.MODEL, text: "Generated: " + prompt, image: imageUrl, timestamp: Date.now() };
         setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, aiMsg], lastUpdated: Date.now() } : s));
       } else {
-        setApiError("Image generation failed. Check your API key.");
+        setApiError("Image generation failed.");
       }
     } catch(e) {
       setApiError("Failed to generate image.");
@@ -284,11 +281,6 @@ const App: React.FC = () => {
                 <p className="text-sm font-bold text-red-700 dark:text-red-200 flex-1 leading-tight">{apiError}</p>
                 <button onClick={() => setApiError(null)} className="p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded-lg"><X size={16} /></button>
               </div>
-              {apiError.toLowerCase().includes("key") && (
-                <p className="text-[10px] text-red-600/60 dark:text-red-400/60 font-medium px-8 italic">
-                  Go to Vercel Settings > Environment Variables and add 'API_KEY'.
-                </p>
-              )}
             </div>
           </div>
         )}

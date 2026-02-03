@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sun, Moon, Menu, Volume2, VolumeX, Brain } from 'lucide-react';
-import Logo from './Logo';
+import { Logo } from './Logo';
 
 interface HeaderProps {
   isDark: boolean;
@@ -14,14 +14,16 @@ interface HeaderProps {
   onOpenPremium: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
+export const Header: React.FC<HeaderProps> = ({ 
   isDark, 
   isAutoSpeech, 
   isDeepThink,
+  isPremium,
   toggleTheme, 
   toggleAutoSpeech, 
   toggleDeepThink,
-  onOpenHistory
+  onOpenHistory,
+  onOpenPremium
 }) => {
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/95 dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 transition-colors shadow-sm">
@@ -85,5 +87,3 @@ const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-
-export default Header;
