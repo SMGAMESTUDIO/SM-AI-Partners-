@@ -10,8 +10,8 @@ import { sendMessageStreamToGemini, getSpeechAudio, generateAiImage } from './se
 import { Message, MessageRole, ChatSession, UserUsage } from './types';
 import { AlertCircle, X } from 'lucide-react';
 
-const STORAGE_KEY = 'sm-ai-partner-sessions-v2';
-const USAGE_KEY = 'sm-ai-usage-v2';
+const STORAGE_KEY = 'sm-ai-partner-sessions-v3';
+const USAGE_KEY = 'sm-ai-usage-v3';
 const AUTO_SPEECH_KEY = 'sm-ai-auto-speech';
 
 type AppMode = 'education' | 'coding' | 'image';
@@ -163,23 +163,36 @@ const App: React.FC = () => {
     if (!isOnline) return; 
     setApiError(null);
     if (appMode === 'image') { handleGenerateImage(text); return; }
-    if (image && !usage.isPremium && usage.imagesSentToday >= 5) { setIsPremiumOpen(true); return; }
-
+    
     stopCurrentAudio();
     abortControllerRef.current = false;
 
     let activeSessionId = currentSessionId;
     if (!activeSessionId) {
-      const newSession: ChatSession = { id: Date.now().toString(), title: text.substring(0, 30) || "New Chat", messages: [], lastUpdated: Date.now() };
+      activeSessionId = Date.now().toString();
+      const newSession: ChatSession = { id: activeSessionId, title: text.substring(0, 30) || "New Chat", messages: [], lastUpdated: Date.now() };
       setSessions(prev => [newSession, ...prev]);
-      activeSessionId = newSession.id;
-      setCurrentSessionId(newSession.id);
+      setCurrentSessionId(activeSessionId);
     }
 
+    const newUserMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
+    
+    // Preparation for API: Get history *before* adding the new message to state to be safe
+    const sessionToUse = sessions.find(s => s.id === activeSessionId);
+    const historyBeforeNewMsg = (sessionToUse?.messages || [])
+      .filter(m => m.text.trim() !== "" || m.image)
+      .map(m => ({
+        role: m.role,
+        parts: [
+          ...(m.image ? [{ inlineData: { mimeType: "image/jpeg", data: m.image.split(',')[1] || m.image } }] : []),
+          { text: m.text || (m.image ? "Image uploaded" : "") }
+        ]
+      }));
+
     if (!isRegenerate) {
-      const newUserMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, newUserMsg], lastUpdated: Date.now() } : s));
     } else {
+      // For regeneration, we use the messages minus the very last AI one
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.slice(0, -1) } : s));
     }
     
@@ -187,16 +200,13 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const currentSession = sessions.find(s => s.id === activeSessionId);
-      const history = currentSession ? currentSession.messages
-        .filter((m, idx) => !isRegenerate || idx < currentSession.messages.length - 1)
-        .map(m => ({ role: m.role, parts: [{ text: m.text }] })) : [];
-
       const aiMsgId = (Date.now() + 1).toString();
       const newAiMsg: Message = { id: aiMsgId, role: MessageRole.MODEL, text: "", timestamp: Date.now() };
+      
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, newAiMsg], lastUpdated: Date.now() } : s));
 
-      const stream = await sendMessageStreamToGemini(text, history, isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
+      const stream = await sendMessageStreamToGemini(text, historyBeforeNewMsg, isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
+      
       let accumulatedText = "";
       for await (const chunk of stream) {
         if (abortControllerRef.current) break;
@@ -205,20 +215,25 @@ const App: React.FC = () => {
           ...s, messages: s.messages.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m)
         } : s));
       }
+      
       if (isAutoSpeech && !abortControllerRef.current) speakResponse(accumulatedText, aiMsgId);
     } catch (error: any) { 
-      setApiError(error.message || "Something went wrong.");
-      // Cleanup blank message if error occurs immediately
-      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.text !== "") } : s));
-    } finally { setIsLoading(false); }
+      console.error("App Error:", error);
+      setApiError(error.message || "I encountered an issue connecting to the AI. Check your API key in Vercel settings.");
+      // Remove the failed AI message
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.text !== "" || m.role === 'user') } : s));
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const handleGenerateImage = async (prompt: string) => {
     if (!usage.isPremium && usage.imagesGeneratedToday >= 5) { setIsPremiumOpen(true); return; }
     setIsLoading(true);
+    setApiError(null);
     let activeSessionId = currentSessionId || Date.now().toString();
     if (!currentSessionId) {
-       const newSession: ChatSession = { id: activeSessionId, title: "Image Gen: " + prompt.substring(0, 15), messages: [], lastUpdated: Date.now() };
+       const newSession: ChatSession = { id: activeSessionId, title: "Image: " + prompt.substring(0, 15), messages: [], lastUpdated: Date.now() };
        setSessions(prev => [newSession, ...prev]);
        setCurrentSessionId(activeSessionId);
     }
@@ -226,8 +241,10 @@ const App: React.FC = () => {
       const imageUrl = await generateAiImage(prompt);
       if (imageUrl) {
         setUsage(prev => ({ ...prev, imagesGeneratedToday: prev.imagesGeneratedToday + 1 }));
-        const aiMsg: Message = { id: Date.now().toString(), role: MessageRole.MODEL, text: "Generated image for: " + prompt, image: imageUrl, timestamp: Date.now() };
+        const aiMsg: Message = { id: Date.now().toString(), role: MessageRole.MODEL, text: "Generated: " + prompt, image: imageUrl, timestamp: Date.now() };
         setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, aiMsg], lastUpdated: Date.now() } : s));
+      } else {
+        setApiError("Image generation failed. Check your API key.");
       }
     } catch(e) {
       setApiError("Failed to generate image.");
@@ -237,6 +254,7 @@ const App: React.FC = () => {
   const startListening = () => {
     if (!isOnline) return;
     const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.lang = 'en-US';
     recognition.onstart = () => setIsListening(true);
     recognition.onend = () => setIsListening(false);
     recognition.onresult = (e: any) => handleSendMessage(e.results[0][0].transcript);
@@ -259,39 +277,62 @@ const App: React.FC = () => {
 
       <main className="flex-1 flex flex-col relative overflow-hidden h-full touch-auto">
         {apiError && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[40] w-[90%] max-w-md animate-in slide-in-from-top-4 duration-300">
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4 rounded-2xl flex items-center gap-3 shadow-lg">
-              <AlertCircle className="text-red-500 shrink-0" size={20} />
-              <p className="text-xs font-bold text-red-700 dark:text-red-300 flex-1 leading-tight">{apiError}</p>
-              <button onClick={() => setApiError(null)} className="p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded-lg"><X size={16} /></button>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md animate-in slide-in-from-top-4 duration-300">
+            <div className="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-800 p-4 rounded-2xl flex flex-col gap-2 shadow-xl backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="text-red-500 shrink-0" size={20} />
+                <p className="text-sm font-bold text-red-700 dark:text-red-200 flex-1 leading-tight">{apiError}</p>
+                <button onClick={() => setApiError(null)} className="p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded-lg"><X size={16} /></button>
+              </div>
+              {apiError.toLowerCase().includes("key") && (
+                <p className="text-[10px] text-red-600/60 dark:text-red-400/60 font-medium px-8 italic">
+                  Go to Vercel Settings > Environment Variables and add 'API_KEY'.
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        <div className="flex-1 relative overflow-hidden flex flex-col h-full">
-          <MessageList 
-            messages={currentMessages} isLoading={isLoading} onSpeak={speakResponse} onStopSpeak={stopCurrentAudio}
-            playingMessageId={playingMessageId} onRegenerate={() => handleSendMessage("", undefined, true)} onSendMessage={handleSendMessage}
-          />
-        </div>
-        
-        <div className="w-full bg-gradient-to-t from-white via-white/80 dark:from-gray-950 dark:via-gray-950/80 pb-safe pt-6 px-4 shrink-0 z-[45]">
-          <TypewriterInput 
-            onSend={handleSendMessage} onMicClick={startListening} onStop={() => { abortControllerRef.current = true; setIsLoading(false); }}
-            isListening={isListening} isLoading={isLoading} disabled={isLoading}
-            placeholderOverwrite={appMode === 'image' ? "Describe the educational image you want..." : undefined}
-          />
-          <Footer />
-        </div>
+        <MessageList 
+          messages={currentMessages} 
+          isLoading={isLoading}
+          onSpeak={speakResponse}
+          onStopSpeak={stopCurrentAudio}
+          playingMessageId={playingMessageId}
+          onRegenerate={() => {
+            const lastUserMsg = currentMessages.filter(m => m.role === MessageRole.USER).pop();
+            if (lastUserMsg) handleSendMessage(lastUserMsg.text, lastUserMsg.image, true);
+          }}
+          onSendMessage={handleSendMessage}
+        />
+
+        <TypewriterInput 
+          onSend={handleSendMessage}
+          onMicClick={startListening}
+          onStop={() => { abortControllerRef.current = true; setIsLoading(false); }}
+          isListening={isListening}
+          isLoading={isLoading}
+          disabled={isLoading}
+          placeholderOverwrite={appMode === 'image' ? "Describe the image you want to generate..." : undefined}
+        />
       </main>
 
       <HistorySidebar 
-        isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} sessions={sessions} currentSessionId={currentSessionId}
-        onSelectSession={setCurrentSessionId} onDeleteSession={(id) => { setSessions(prev => prev.filter(s => s.id !== id)); if (currentSessionId === id) setCurrentSessionId(null); }}
-        onNewChat={() => { setCurrentSessionId(null); setAppMode('education'); setIsHistoryOpen(false); }}
-        onStartCoding={() => { setCurrentSessionId(null); setAppMode('coding'); setIsHistoryOpen(false); }}
-        onStartImageGen={() => { setCurrentSessionId(null); setAppMode('image'); setIsHistoryOpen(false); }}
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        sessions={sessions}
+        currentSessionId={currentSessionId}
+        onSelectSession={setCurrentSessionId}
+        onDeleteSession={(id) => {
+          setSessions(prev => prev.filter(s => s.id !== id));
+          if (currentSessionId === id) setCurrentSessionId(null);
+        }}
+        onNewChat={() => { setCurrentSessionId(null); setAppMode('education'); }}
+        onStartImageGen={() => { setCurrentSessionId(null); setAppMode('image'); }}
+        onStartCoding={() => { setCurrentSessionId(null); setAppMode('coding'); }}
       />
+      
+      <Footer />
     </div>
   );
 };
