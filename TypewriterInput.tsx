@@ -1,156 +1,96 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Mic, MicOff, Image as ImageIcon, X, Square } from 'lucide-react';
+import { Send, Mic, MicOff } from 'lucide-react';
 
 interface TypewriterInputProps {
-  onSend: (text: string, image?: string) => void;
+  onSend: (text: string) => void;
   onMicClick: () => void;
-  onStop?: () => void;
   isListening: boolean;
-  isLoading?: boolean;
   disabled: boolean;
-  placeholderOverwrite?: string;
 }
 
-const DEFAULT_PLACEHOLDERS = [
-  "Ask School/College questions...",
-  "Explain Physics step-by-step...",
-  "Help with Math assignments...",
-  "How to earn online?"
+const PLACEHOLDERS = [
+  "Ask School, College, or University questions...",
+  "How to earn online through freelancing?",
+  "Explain Quantum Physics like I'm 10...",
+  "Help with Sindh Board/Oxford/Cambridge exam...",
+  "Solve a complex Calculus problem...",
+  "Ask about Islamiyat or History...",
+  "Tips for Logo Design & Development..."
 ];
 
-const TypewriterInput: React.FC<TypewriterInputProps> = ({ 
-  onSend, 
-  onMicClick, 
-  onStop, 
-  isListening, 
-  isLoading, 
-  disabled,
-  placeholderOverwrite
-}) => {
+const TypewriterInput: React.FC<TypewriterInputProps> = ({ onSend, onMicClick, isListening, disabled }) => {
   const [inputValue, setInputValue] = useState('');
   const [placeholder, setPlaceholder] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Typewriter effect logic
   useEffect(() => {
-    if (placeholderOverwrite) {
-      setPlaceholder(placeholderOverwrite);
-      return;
-    }
-    const currentText = DEFAULT_PLACEHOLDERS[placeholderIndex];
-    let typingSpeed = isDeleting ? 30 : 60;
+    const currentText = PLACEHOLDERS[placeholderIndex];
+    let typingSpeed = isDeleting ? 40 : 80;
+
     if (!isDeleting && charIndex === currentText.length) {
       typingSpeed = 2500;
       setTimeout(() => setIsDeleting(true), 2500);
     } else if (isDeleting && charIndex === 0) {
       setIsDeleting(false);
-      setPlaceholderIndex((prev) => (prev + 1) % DEFAULT_PLACEHOLDERS.length);
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
       typingSpeed = 500;
     }
+
     const timer = setTimeout(() => {
       setPlaceholder(currentText.substring(0, charIndex + (isDeleting ? -1 : 1)));
       setCharIndex((prev) => prev + (isDeleting ? -1 : 1));
     }, typingSpeed);
+
     return () => clearTimeout(timer);
-  }, [charIndex, isDeleting, placeholderIndex, placeholderOverwrite]);
+  }, [charIndex, isDeleting, placeholderIndex]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim() || selectedImage) {
-      onSend(inputValue, selectedImage || undefined);
+    if (inputValue.trim()) {
+      onSend(inputValue);
       setInputValue('');
-      setSelectedImage(null);
-      if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    }
-  };
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setSelectedImage(reader.result as string);
-      reader.readAsDataURL(file);
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 pb-1 md:px-4 md:pb-4">
-      {selectedImage && (
-        <div className="mb-2 ml-1 relative inline-block animate-in zoom-in duration-200">
-          <img src={selectedImage} alt="Preview" className="h-12 w-12 md:h-16 md:w-16 object-cover rounded-xl border-2 border-blue-500 shadow-md" />
-          <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow-sm">
-            <X size={10} />
-          </button>
+    <div className="w-full max-w-4xl mx-auto p-4">
+      <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
+        <div className="relative flex-grow group">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            disabled={disabled}
+            className="w-full p-4 pr-12 rounded-2xl border-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm"
+            placeholder={placeholder}
+          />
+          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none opacity-20 group-focus-within:opacity-40 transition-opacity">
+            <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded">Enter</kbd>
+          </div>
         </div>
-      )}
-      
-      <form onSubmit={handleSubmit} className="flex items-end gap-1.5 md:gap-2">
-        <input type="file" ref={fileInputRef} onChange={handleFile} accept="image/*" className="hidden" />
-        
+
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isLoading}
-          className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center rounded-xl md:rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          onClick={onMicClick}
+          className={`p-4 rounded-2xl transition-all duration-300 shadow-md ${
+            isListening 
+              ? 'bg-red-500 text-white animate-pulse' 
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+          }`}
+          title="Voice Input (English/Urdu/Sindhi)"
         >
-          <ImageIcon size={18} className="md:w-6 md:h-6" />
+          {isListening ? <MicOff size={24} /> : <Mic size={24} />}
         </button>
-
-        <div className="relative flex-grow">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                if (inputValue.trim() || selectedImage) {
-                  e.preventDefault();
-                  handleSubmit(e as any);
-                }
-              }
-            }}
-            disabled={disabled}
-            className="w-full p-2.5 md:p-4 rounded-xl md:rounded-2xl border-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none text-[14px] md:text-base leading-tight"
-            placeholder={placeholder}
-            style={{ maxHeight: '150px' }}
-          />
-        </div>
-
-        {!isLoading ? (
-          <button
-            type="button"
-            onClick={onMicClick}
-            className={`w-10 h-10 md:w-14 md:h-14 flex items-center justify-center rounded-xl md:rounded-2xl shrink-0 transition-all ${
-              isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            {isListening ? <MicOff size={18} className="md:w-6 md:h-6" /> : <Mic size={18} className="md:w-6 md:h-6" />}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onStop}
-            className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center rounded-xl md:rounded-2xl bg-red-100 dark:bg-red-900/30 text-red-600 shrink-0 animate-in zoom-in"
-          >
-            <Square size={16} fill="currentColor" className="md:w-5 md:h-5" />
-          </button>
-        )}
 
         <button
           type="submit"
-          disabled={(!inputValue.trim() && !selectedImage) || isLoading}
-          className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center rounded-xl md:rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 shrink-0 transition-transform active:scale-95"
+          disabled={!inputValue.trim() || disabled}
+          className="p-4 rounded-2xl bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-primary-500/25 active:scale-95"
         >
-          <Send size={18} className="md:w-6 md:h-6" />
+          <Send size={24} />
         </button>
       </form>
     </div>
