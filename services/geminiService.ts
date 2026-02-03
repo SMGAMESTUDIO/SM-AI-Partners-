@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
@@ -25,8 +26,8 @@ export const sendMessageStreamToGemini = async (
   // Use the API key from environment variables
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey.includes("placeholder")) {
-    throw new Error("API_KEY is missing. Please add your key to Vercel Environment Variables (Settings > Environment Variables > API_KEY).");
+  if (!apiKey) {
+    throw new Error("API_KEY is missing. Please REDEPLOY your app on Vercel after adding the Environment Variable.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -53,8 +54,6 @@ export const sendMessageStreamToGemini = async (
   
   parts.push({ text: message || (image ? "Please explain this image." : "Hello") });
 
-  // Safety check: ensure history alternates correctly
-  // Gemini expects: User, Model, User, Model...
   const validatedHistory = history.filter((item, index) => {
     if (index === 0) return item.role === 'user';
     return item.role !== history[index - 1].role;
@@ -71,10 +70,7 @@ export const sendMessageStreamToGemini = async (
     });
   } catch (err: any) {
     console.error("Gemini Connection Error:", err);
-    if (err.message?.includes("403") || err.message?.includes("401")) {
-      throw new Error("Invalid API Key. Please check your Gemini API key.");
-    }
-    throw new Error(err.message || "Failed to connect to AI. Check your internet connection.");
+    throw new Error(err.message || "Failed to connect to AI. Check your internet or API key.");
   }
 };
 
