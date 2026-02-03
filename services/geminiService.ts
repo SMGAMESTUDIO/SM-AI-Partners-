@@ -1,5 +1,7 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
 const EDUCATION_INSTRUCTION = `
 You are "SM AI Partner", a professional educational assistant developed by SM Gaming Studio.
 - Your goal is to help students with Math, Science, IT, History, Islamiyat, and Languages.
@@ -15,9 +17,6 @@ You are "SM AI Partner - Coding Expert".
 - Explain concepts clearly for students.
 `;
 
-// SM AI Partner - User provided API Key
-const MY_API_KEY = "AIzaSyAnKW6s4PimuHqB7dfrrKzd9MmgDS_k6DA";
-
 export const sendMessageStreamToGemini = async (
   message: string, 
   history: {role: string, parts: any[]}[] = [],
@@ -25,9 +24,6 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  const ai = new GoogleGenAI({ apiKey: MY_API_KEY });
-  
-  // Select best model based on task
   const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
@@ -60,12 +56,11 @@ export const sendMessageStreamToGemini = async (
     });
   } catch (err: any) {
     console.error("SM AI Partner Error:", err);
-    throw new Error("I encountered an issue connecting to the AI. Please check your connection or API key.");
+    throw new Error("I encountered an issue connecting to the AI. Please check your connection.");
   }
 };
 
 export const generateAiImage = async (prompt: string) => {
-  const ai = new GoogleGenAI({ apiKey: MY_API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -84,7 +79,6 @@ export const generateAiImage = async (prompt: string) => {
 
 export const getSpeechAudio = async (text: string) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: MY_API_KEY });
     const cleanText = text.replace(/[*_#`~>|\[\]\(\)]/g, '').substring(0, 1500); 
     if (!cleanText) return null;
 
