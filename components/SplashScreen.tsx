@@ -1,6 +1,7 @@
+
 import React from 'react';
-// Corrected: Logo is a named export from ./Logo, so it must be imported with curly braces.
-import { Logo } from './Logo';
+// Fixed: Logo is a default export from ./Logo, so it must be imported without curly braces.
+import Logo from './Logo';
 
 const SplashScreen: React.FC = () => {
   return (

@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Message, MessageRole } from '../types';
 import { User, Volume2, VolumeX, Copy, Check, RotateCcw } from 'lucide-react';
-// Corrected: Logo is a named export from ./Logo, so it must be imported with curly braces.
-import { Logo } from './Logo';
+import Logo from './Logo';
 
 interface MessageListProps {
   messages: Message[];

@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { X, MessageSquare, Trash2, Plus, ImageIcon, Sparkles, Mail, Globe, Code, Zap } from 'lucide-react';
 import { ChatSession } from '../types';
-// Corrected: Logo is a named export from ./Logo, so it must be imported with curly braces.
-import { Logo } from './Logo';
+// Fixed: Logo is a default export from ./Logo, so it must be imported without curly braces.
+import Logo from './Logo';
 
 interface HistorySidebarProps {
   isOpen: boolean;

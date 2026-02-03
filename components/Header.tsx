@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sun, Moon, Menu, Volume2, VolumeX, Brain } from 'lucide-react';
-import { Logo } from './Logo';
+import Logo from './Logo';
 
 interface HeaderProps {
   isDark: boolean;
@@ -14,7 +14,7 @@ interface HeaderProps {
   onOpenPremium: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
+const Header: React.FC<HeaderProps> = ({ 
   isDark, 
   isAutoSpeech, 
   isDeepThink,
@@ -87,3 +87,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+export default Header;

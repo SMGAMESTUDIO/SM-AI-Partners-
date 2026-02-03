@@ -5,7 +5,7 @@ interface LogoProps {
   size?: number;
 }
 
-export const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
+const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
   return (
     <div 
       className={`relative flex items-center justify-center transition-all duration-300 ${className}`} 
@@ -78,3 +78,5 @@ export const Logo: React.FC<LogoProps> = ({ className = "", size = 100 }) => {
     </div>
   );
 };
+
+export default Logo;
