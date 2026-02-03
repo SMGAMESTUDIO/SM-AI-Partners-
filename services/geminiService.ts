@@ -23,14 +23,8 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  // Use the API key from environment variables
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("API_KEY is missing. Please REDEPLOY your app on Vercel after adding the Environment Variable.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Directly initializing with the required pattern for automatic injection
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
@@ -70,14 +64,12 @@ export const sendMessageStreamToGemini = async (
     });
   } catch (err: any) {
     console.error("Gemini Connection Error:", err);
-    throw new Error(err.message || "Failed to connect to AI. Check your internet or API key.");
+    throw new Error(err.message || "Connection error. Please check your API key in Vercel.");
   }
 };
 
 export const generateAiImage = async (prompt: string) => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
@@ -96,9 +88,7 @@ export const generateAiImage = async (prompt: string) => {
 };
 
 export const getSpeechAudio = async (text: string) => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const cleanText = text.replace(/[*_#`~>|\[\]\(\)]/g, '').substring(0, 1500); 
