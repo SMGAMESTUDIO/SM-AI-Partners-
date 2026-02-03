@@ -300,7 +300,7 @@ const App: React.FC = () => {
                     <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">Vercel Guide</span>
                   </div>
                   <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300">
-                    Go to <span className="underline italic">Deployments</span> > click <span className="italic">...</span> > <span className="font-black italic">Redeploy</span>. 
+                    Go to <span className="underline italic">Deployments</span> &gt; click <span className="italic">...</span> &gt; <span className="font-black italic">Redeploy</span>. 
                     This is necessary to inject the key into the website.
                   </p>
                 </div>
