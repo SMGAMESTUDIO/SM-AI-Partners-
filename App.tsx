@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -9,7 +8,7 @@ import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
 import { sendMessageStreamToGemini, getSpeechAudio, generateAiImage } from './services/geminiService';
 import { Message, MessageRole, ChatSession, UserUsage } from './types';
-import { Crown, X, Zap, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 
 const STORAGE_KEY = 'sm-ai-partner-sessions-v2';
 const USAGE_KEY = 'sm-ai-usage-v2';
@@ -31,9 +30,10 @@ const decodeBase64 = (base64: string) => {
 };
 
 const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer | null> => {
-  if (data.length === 0) return null;
+  if (!data || data.length === 0) return null;
   try {
     const dataInt16 = new Int16Array(data.buffer);
+    if (dataInt16.length === 0) return null;
     const frameCount = dataInt16.length / numChannels;
     const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
     for (let channel = 0; channel < numChannels; channel++) {
@@ -86,7 +86,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 4000); 
+    const timer = setTimeout(() => setShowSplash(false), 3500); 
     return () => clearTimeout(timer);
   }, []);
 
@@ -101,9 +101,11 @@ const App: React.FC = () => {
     const savedUsage = localStorage.getItem(USAGE_KEY);
     const today = new Date().toISOString().split('T')[0];
     if (savedUsage) {
-      const parsed = JSON.parse(savedUsage);
-      if (parsed.lastImageDate !== today) setUsage({ ...parsed, imagesSentToday: 0, imagesGeneratedToday: 0, lastImageDate: today });
-      else setUsage(parsed);
+      try {
+        const parsed = JSON.parse(savedUsage);
+        if (parsed.lastImageDate !== today) setUsage({ ...parsed, imagesSentToday: 0, imagesGeneratedToday: 0, lastImageDate: today });
+        else setUsage(parsed);
+      } catch(e) {}
     }
     const savedSessions = localStorage.getItem(STORAGE_KEY);
     if (savedSessions) {
@@ -168,7 +170,7 @@ const App: React.FC = () => {
 
     let activeSessionId = currentSessionId;
     if (!activeSessionId) {
-      const newSession: ChatSession = { id: Date.now().toString(), title: text.substring(0, 30), messages: [], lastUpdated: Date.now() };
+      const newSession: ChatSession = { id: Date.now().toString(), title: text.substring(0, 30) || "New Chat", messages: [], lastUpdated: Date.now() };
       setSessions(prev => [newSession, ...prev]);
       activeSessionId = newSession.id;
       setCurrentSessionId(newSession.id);
@@ -185,9 +187,9 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const sessionToUse = sessions.find(s => s.id === activeSessionId);
-      const history = sessionToUse ? sessionToUse.messages
-        .filter((m, idx) => !isRegenerate || idx < sessionToUse.messages.length - 1)
+      const currentSession = sessions.find(s => s.id === activeSessionId);
+      const history = currentSession ? currentSession.messages
+        .filter((m, idx) => !isRegenerate || idx < currentSession.messages.length - 1)
         .map(m => ({ role: m.role, parts: [{ text: m.text }] })) : [];
 
       const aiMsgId = (Date.now() + 1).toString();
@@ -205,8 +207,9 @@ const App: React.FC = () => {
       }
       if (isAutoSpeech && !abortControllerRef.current) speakResponse(accumulatedText, aiMsgId);
     } catch (error: any) { 
-      setApiError(error.message || "Something went wrong. Please check your API key.");
-      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.slice(0, -1) } : s));
+      setApiError(error.message || "Something went wrong.");
+      // Cleanup blank message if error occurs immediately
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.text !== "") } : s));
     } finally { setIsLoading(false); }
   };
 
@@ -214,13 +217,20 @@ const App: React.FC = () => {
     if (!usage.isPremium && usage.imagesGeneratedToday >= 5) { setIsPremiumOpen(true); return; }
     setIsLoading(true);
     let activeSessionId = currentSessionId || Date.now().toString();
+    if (!currentSessionId) {
+       const newSession: ChatSession = { id: activeSessionId, title: "Image Gen: " + prompt.substring(0, 15), messages: [], lastUpdated: Date.now() };
+       setSessions(prev => [newSession, ...prev]);
+       setCurrentSessionId(activeSessionId);
+    }
     try {
       const imageUrl = await generateAiImage(prompt);
       if (imageUrl) {
         setUsage(prev => ({ ...prev, imagesGeneratedToday: prev.imagesGeneratedToday + 1 }));
-        const aiMsg: Message = { id: Date.now().toString(), role: MessageRole.MODEL, text: "Here is your generated image:", image: imageUrl, timestamp: Date.now() };
+        const aiMsg: Message = { id: Date.now().toString(), role: MessageRole.MODEL, text: "Generated image for: " + prompt, image: imageUrl, timestamp: Date.now() };
         setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, aiMsg], lastUpdated: Date.now() } : s));
       }
+    } catch(e) {
+      setApiError("Failed to generate image.");
     } finally { setIsLoading(false); setAppMode('education'); }
   };
 
@@ -240,7 +250,7 @@ const App: React.FC = () => {
     <div className="flex flex-col h-[100dvh] w-full bg-white dark:bg-gray-950 transition-colors overflow-hidden font-sans fixed inset-0 touch-none">
       <Header 
         isDark={isDark} isAutoSpeech={isAutoSpeech} isDeepThink={isDeepThink} isPremium={usage.isPremium}
-        toggleTheme={() => { setIsDark(!isDark); document.documentElement.classList.toggle('dark'); }}
+        toggleTheme={() => { setIsDark(!isDark); document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', !isDark ? 'dark' : 'light'); }}
         toggleAutoSpeech={() => { setIsAutoSpeech(!isAutoSpeech); localStorage.setItem(AUTO_SPEECH_KEY, (!isAutoSpeech).toString()); }}
         toggleDeepThink={() => setIsDeepThink(!isDeepThink)}
         onOpenHistory={() => setIsHistoryOpen(true)}
@@ -261,7 +271,7 @@ const App: React.FC = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col h-full">
           <MessageList 
             messages={currentMessages} isLoading={isLoading} onSpeak={speakResponse} onStopSpeak={stopCurrentAudio}
-            playingMessageId={playingMessageId} onRegenerate={() => {}} onSendMessage={handleSendMessage}
+            playingMessageId={playingMessageId} onRegenerate={() => handleSendMessage("", undefined, true)} onSendMessage={handleSendMessage}
           />
         </div>
         
