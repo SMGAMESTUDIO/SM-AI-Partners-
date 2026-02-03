@@ -1,7 +1,5 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const EDUCATION_INSTRUCTION = `
 You are "SM AI Partner", a professional educational assistant developed by SM Gaming Studio.
 - Your goal is to help students with Math, Science, IT, History, Islamiyat, and Languages.
@@ -19,11 +17,19 @@ You are "SM AI Partner - Coding Expert".
 
 export const sendMessageStreamToGemini = async (
   message: string, 
-  history: {role: string, parts: any[]}[] = [],
+  history: any[] = [],
   isDeepThink: boolean = false,
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
+  // Use the API key from environment variables
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey.includes("placeholder")) {
+    throw new Error("API_KEY is missing. Please add your key to Vercel Environment Variables (Settings > Environment Variables > API_KEY).");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
@@ -35,7 +41,7 @@ export const sendMessageStreamToGemini = async (
     config.thinkingConfig = { thinkingBudget: 16000 };
   }
 
-  const parts: any[] = [{ text: message }];
+  const parts: any[] = [];
   if (image) {
     parts.push({
       inlineData: {
@@ -44,27 +50,43 @@ export const sendMessageStreamToGemini = async (
       }
     });
   }
+  
+  parts.push({ text: message || (image ? "Please explain this image." : "Hello") });
+
+  // Safety check: ensure history alternates correctly
+  // Gemini expects: User, Model, User, Model...
+  const validatedHistory = history.filter((item, index) => {
+    if (index === 0) return item.role === 'user';
+    return item.role !== history[index - 1].role;
+  });
 
   try {
     return await ai.models.generateContentStream({
       model: modelName,
       contents: [
-        ...history,
+        ...validatedHistory,
         { role: 'user', parts: parts }
       ],
       config: config
     });
   } catch (err: any) {
-    console.error("SM AI Partner Error:", err);
-    throw new Error("I encountered an issue connecting to the AI. Please check your connection.");
+    console.error("Gemini Connection Error:", err);
+    if (err.message?.includes("403") || err.message?.includes("401")) {
+      throw new Error("Invalid API Key. Please check your Gemini API key.");
+    }
+    throw new Error(err.message || "Failed to connect to AI. Check your internet connection.");
   }
 };
 
 export const generateAiImage = async (prompt: string) => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return null;
+  const ai = new GoogleGenAI({ apiKey });
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: [{ parts: [{ text: `High quality educational illustration for students: ${prompt}` }] }],
+      contents: [{ parts: [{ text: `Educational high-quality illustration: ${prompt}` }] }],
       config: { imageConfig: { aspectRatio: "1:1" } }
     });
 
@@ -78,6 +100,10 @@ export const generateAiImage = async (prompt: string) => {
 };
 
 export const getSpeechAudio = async (text: string) => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return null;
+  const ai = new GoogleGenAI({ apiKey });
+
   try {
     const cleanText = text.replace(/[*_#`~>|\[\]\(\)]/g, '').substring(0, 1500); 
     if (!cleanText) return null;
