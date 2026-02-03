@@ -42,6 +42,7 @@
         overflow: hidden;
         overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
+        background-color: #020617; /* Matches Splash screen background */
       }
 
       ::-webkit-scrollbar { width: 5px; }
@@ -60,6 +61,26 @@
       .h-screen-dynamic {
         height: 100dvh;
       }
+
+      .initial-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: white;
+        font-family: sans-serif;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255,255,255,0.1);
+        border-radius: 50%;
+        border-top-color: #3b82f6;
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   <script type="importmap">
 {
@@ -74,6 +95,14 @@
 </script>
 </head>
   <body class="bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Ye loading spinner sirf tab dikhega jab tak React load nahi ho jata -->
+      <div class="initial-loader">
+        <div class="spinner"></div>
+        <p style="font-size: 10px; font-weight: 900; letter-spacing: 0.2em; opacity: 0.5; text-transform: uppercase;">SM AI Partner Loading...</p>
+      </div>
+    </div>
+    <!-- Zaroori fix: Vercel ke liye explicit script tag -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

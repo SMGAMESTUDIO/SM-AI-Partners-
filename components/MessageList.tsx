@@ -63,7 +63,7 @@ const MessageList: React.FC<MessageListProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-8 scroll-smooth custom-scrollbar w-full overscroll-contain"
+      className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 scroll-smooth custom-scrollbar w-full overscroll-contain bg-gray-50/30 dark:bg-transparent"
     >
       {messages.length === 0 && (
         <div className="min-h-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-1000">
@@ -73,10 +73,12 @@ const MessageList: React.FC<MessageListProps> = ({
             <span className="text-pink-500">AI</span>
             <span className="text-gray-900 dark:text-gray-100"> PARTNER</span>
           </h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.6em] mb-4">Empowering Students with Intelligence</p>
-          <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-pink-500 rounded-full opacity-50"></div>
-          <p className="mt-8 text-sm text-gray-500 dark:text-gray-400 max-w-md leading-relaxed">
-            Your professional educational companion for Math, Science, Coding, and general studies. How can I assist your learning today?
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.5em] mb-4">Educational Assistant</p>
+          <div className="w-16 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-60"></div>
+          <p className="mt-8 text-sm font-medium text-gray-500 dark:text-gray-400 max-w-xs md:max-w-md leading-relaxed">
+            Welcome to your digital study partner. I am ready to help you with Math, Science, IT, and more. 
+            <br/><br/>
+            <span className="text-blue-500 font-bold italic">"Ask me anything to start learning!"</span>
           </p>
         </div>
       )}
@@ -86,32 +88,32 @@ const MessageList: React.FC<MessageListProps> = ({
         const isAiGenerating = msg.role === MessageRole.MODEL && isLastMessage && isLoading;
 
         return (
-          <div key={msg.id} className={`flex w-full animate-in fade-in slide-in-from-bottom-4 duration-500 ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
-            <div className={`flex max-w-[95%] md:max-w-[85%] gap-3 ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div key={msg.id} className={`flex w-full animate-in fade-in slide-in-from-bottom-2 duration-400 ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex max-w-[92%] md:max-w-[85%] gap-2 md:gap-3 ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className="flex-shrink-0 mt-1">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border shadow-sm transition-all ${
+                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center border shadow-sm transition-all ${
                   msg.role === MessageRole.USER 
                     ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700' 
                     : 'bg-white border-transparent'
                 }`}>
-                  {msg.role === MessageRole.USER ? <User size={20} className="text-gray-400" /> : <Logo size={36} />}
+                  {msg.role === MessageRole.USER ? <User size={16} className="text-gray-400" /> : <Logo size={32} />}
                 </div>
               </div>
-              <div className="flex flex-col gap-2 min-w-0">
+              <div className="flex flex-col gap-1.5 min-w-0">
                 {msg.image && (
-                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md mb-2 overflow-hidden bg-gray-50 dark:bg-gray-900">
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-md mb-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
                     <img src={msg.image} alt="Upload" className="max-w-xs md:max-w-md w-full h-auto" />
                   </div>
                 )}
                 <div className={`${msg.role === MessageRole.USER ? 'text-right' : 'text-left'}`}>
-                  <div className={`inline-block text-[15px] leading-relaxed break-words px-5 py-3 rounded-2xl shadow-sm ${
+                  <div className={`inline-block text-[14px] md:text-[15px] leading-relaxed break-words px-4 py-2.5 rounded-2xl shadow-sm ${
                     msg.role === MessageRole.USER 
                       ? 'bg-blue-600 text-white rounded-tr-none' 
-                      : 'bg-gray-100 dark:bg-gray-800/60 dark:text-gray-200 rounded-tl-none'
+                      : 'bg-white dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 dark:text-gray-200 rounded-tl-none'
                   }`}>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {msg.text.split('\n').map((line, l) => (
-                        <p key={l}>{renderFormattedText(line)}</p>
+                        <p key={l} className={line.trim() === '' ? 'h-2' : ''}>{renderFormattedText(line)}</p>
                       ))}
                       {isAiGenerating && <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse align-middle ml-1 rounded-full" />}
                     </div>
@@ -119,14 +121,14 @@ const MessageList: React.FC<MessageListProps> = ({
                 </div>
                 
                 {msg.role === MessageRole.MODEL && !isAiGenerating && (
-                  <div className="flex items-center gap-2 mt-1 opacity-60 hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
-                      {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                  <div className="flex items-center gap-1 mt-0.5 opacity-50 hover:opacity-100 transition-opacity ml-1">
+                    <button onClick={() => handleCopy(msg.text, msg.id)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all" title="Copy Text">
+                      {copiedId === msg.id ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
                     </button>
-                    <button onClick={() => onSpeak(msg.text, msg.id)} className={`p-2 rounded-xl transition-all ${playingMessageId === msg.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}>
-                      {playingMessageId === msg.id ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    <button onClick={() => onSpeak(msg.text, msg.id)} className={`p-1.5 rounded-lg transition-all ${playingMessageId === msg.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`} title="Play Audio">
+                      {playingMessageId === msg.id ? <VolumeX size={12} /> : <Volume2 size={12} />}
                     </button>
-                    {isLastMessage && <button onClick={onRegenerate} className="p-2 hover:bg-gray-100 rounded-xl transition-all"><RotateCcw size={14} /></button>}
+                    {isLastMessage && <button onClick={onRegenerate} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all" title="Regenerate Answer"><RotateCcw size={12} /></button>}
                   </div>
                 )}
               </div>
@@ -134,7 +136,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         );
       })}
-      <div ref={messagesEndRef} className="h-4 w-full" />
+      <div ref={messagesEndRef} className="h-2 w-full" />
     </div>
   );
 };

@@ -13,22 +13,11 @@ const CODING_INSTRUCTION = `
 You are "SM AI Partner - Coding Expert". 
 - Provide high-quality, professional code.
 - Focus on logic, optimization, and debugging.
+- Explain concepts clearly for students.
 `;
 
-/**
- * ADVICE FOR A-IDE USERS:
- * If your app shows "API Key Missing", replace process.env.API_KEY 
- * with your actual key string like: const key = "AIzaSy...";
- */
-const getApiKey = () => {
-  const key = process.env.API_KEY; 
-  
-  if (!key || key === "undefined" || key.length < 10) {
-    console.error("SM AI Partner Error: Valid API Key is missing.");
-    return null;
-  }
-  return key;
-};
+// SM AI Partner - Aapki API Key yahan set kar di hai
+const MY_API_KEY = "AIzaSyAnKW6s4PimuHqB7dfrrKzd9MmgDS_k6DA";
 
 export const sendMessageStreamToGemini = async (
   message: string, 
@@ -37,13 +26,10 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API Key configuration missing. Please ensure your API key is correctly set in the code.");
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: MY_API_KEY });
   
-  // Using gemini-3-flash-preview as it's the most stable for general tasks
-  const modelName = 'gemini-3-flash-preview';
+  // Tasks ke mutabiq behtareen model ka intekhab
+  const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
     systemInstruction: mode === 'coding' ? CODING_INSTRUCTION : EDUCATION_INSTRUCTION,
@@ -51,7 +37,6 @@ export const sendMessageStreamToGemini = async (
   };
 
   if (isDeepThink) {
-    // Thinking budget is only for Gemini 3 and 2.5 series
     config.thinkingConfig = { thinkingBudget: 16000 };
   }
 
@@ -75,27 +60,18 @@ export const sendMessageStreamToGemini = async (
       config: config
     });
   } catch (err: any) {
-    if (err.message?.includes("403") || err.message?.includes("permission")) {
-      throw new Error("Permission Denied: Your API key might be inactive or restricted. Please check Google AI Studio Billing/Quotas.");
-    }
-    throw err;
+    console.error("SM AI Partner Error:", err);
+    throw new Error("I encountered an issue connecting to the AI. Please check your connection.");
   }
 };
 
 export const generateAiImage = async (prompt: string) => {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: MY_API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: [{ parts: [{ text: `Professional educational diagram of: ${prompt}. Cinematic, detailed.` }] }],
-      config: { 
-        imageConfig: { 
-          aspectRatio: "1:1"
-        } 
-      }
+      contents: [{ parts: [{ text: `High quality educational illustration for students: ${prompt}` }] }],
+      config: { imageConfig: { aspectRatio: "1:1" } }
     });
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -108,12 +84,9 @@ export const generateAiImage = async (prompt: string) => {
 };
 
 export const getSpeechAudio = async (text: string) => {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-
   try {
-    const ai = new GoogleGenAI({ apiKey });
-    // Remove markdown symbols before sending to TTS for cleaner audio
+    const ai = new GoogleGenAI({ apiKey: MY_API_KEY });
+    // Text ko saaf karna taake voice clear aye
     const cleanText = text.replace(/[*_#`~>|\[\]\(\)]/g, '').substring(0, 1500); 
     if (!cleanText) return null;
 
@@ -121,7 +94,7 @@ export const getSpeechAudio = async (text: string) => {
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: cleanText }] }],
       config: {
-        responseModalities: [Modality.AUDIO],
+        responseModalities: [Modality.AUDIO], // Corrected spelling
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
         },

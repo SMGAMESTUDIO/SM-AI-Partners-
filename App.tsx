@@ -18,21 +18,33 @@ const AUTO_SPEECH_KEY = 'sm-ai-auto-speech';
 type AppMode = 'education' | 'coding' | 'image';
 
 const decodeBase64 = (base64: string) => {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return bytes;
+  if (!base64) return new Uint8Array(0);
+  try {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    return bytes;
+  } catch (e) {
+    console.error("Base64 decode error", e);
+    return new Uint8Array(0);
+  }
 };
 
-const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> => {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer | null> => {
+  if (data.length === 0) return null;
+  try {
+    const dataInt16 = new Int16Array(data.buffer);
+    const frameCount = dataInt16.length / numChannels;
+    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+    for (let channel = 0; channel < numChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+    return buffer;
+  } catch (e) {
+    console.error("Audio decode error", e);
+    return null;
   }
-  return buffer;
 };
 
 const App: React.FC = () => {
@@ -109,7 +121,10 @@ const App: React.FC = () => {
   const currentMessages = sessions.find(s => s.id === currentSessionId)?.messages || [];
 
   const stopCurrentAudio = () => {
-    if (currentAudioSourceRef.current) { currentAudioSourceRef.current.stop(); currentAudioSourceRef.current = null; }
+    if (currentAudioSourceRef.current) { 
+      try { currentAudioSourceRef.current.stop(); } catch(e) {}
+      currentAudioSourceRef.current = null; 
+    }
     setPlayingMessageId(null);
   };
 
@@ -124,14 +139,22 @@ const App: React.FC = () => {
       const base64Audio = await getSpeechAudio(text);
       if (!base64Audio || abortControllerRef.current) { setPlayingMessageId(null); return; }
       
-      const audioBuffer = await decodeAudioData(decodeBase64(base64Audio), audioContextRef.current, 24000, 1);
+      const audioData = decodeBase64(base64Audio);
+      if (audioData.length === 0) { setPlayingMessageId(null); return; }
+
+      const audioBuffer = await decodeAudioData(audioData, audioContextRef.current, 24000, 1);
+      if (!audioBuffer) { setPlayingMessageId(null); return; }
+
       const source = audioContextRef.current.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContextRef.current.destination);
       source.onended = () => { if (playingMessageId === id) setPlayingMessageId(null); };
       currentAudioSourceRef.current = source;
       source.start();
-    } catch (e) { setPlayingMessageId(null); }
+    } catch (e) { 
+      console.error("Playback error", e);
+      setPlayingMessageId(null); 
+    }
   };
 
   const handleSendMessage = async (text: string, image?: string, isRegenerate = false) => {
@@ -183,7 +206,6 @@ const App: React.FC = () => {
       if (isAutoSpeech && !abortControllerRef.current) speakResponse(accumulatedText, aiMsgId);
     } catch (error: any) { 
       setApiError(error.message || "Something went wrong. Please check your API key.");
-      // Remove the empty AI message on error
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.slice(0, -1) } : s));
     } finally { setIsLoading(false); }
   };

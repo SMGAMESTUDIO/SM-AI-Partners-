@@ -1,3 +1,4 @@
+
 package com.smgaming.aipartner;
 
 import android.Manifest;
@@ -11,6 +12,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -20,6 +22,10 @@ public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private ProgressBar progressBar;
     private static final int PERMISSIONS_REQUEST_CODE = 101;
+
+    // 💡 IMPORTANT: Replace this URL with your actual hosted website link
+    // Example: "https://your-app-name.vercel.app"
+    private static final String APP_URL = "https://sm-ai-partner-placeholder.vercel.app";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +43,6 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setDatabaseEnabled(true);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         
-        // Performance Tweaks
         myWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
@@ -51,6 +56,13 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
             }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                if (failingUrl.contains("placeholder")) {
+                    Toast.makeText(MainActivity.this, "Configuration Error: Please update APP_URL in MainActivity.java", Toast.LENGTH_LONG).show();
+                }
+            }
         });
 
         myWebView.setWebChromeClient(new WebChromeClient() {
@@ -62,11 +74,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Request All Necessary Permissions
         checkAndRequestPermissions();
 
-        // Important: Link your hosted React Web App URL here
-        myWebView.loadUrl("https://sm-ai-partner.vercel.app");
+        // Load the app
+        myWebView.loadUrl(APP_URL);
     }
 
     private void checkAndRequestPermissions() {
