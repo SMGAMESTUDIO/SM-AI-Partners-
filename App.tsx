@@ -9,7 +9,7 @@ import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
 import { sendMessageStreamToGemini, getSpeechAudio, generateAiImage } from './services/geminiService';
 import { Message, MessageRole, ChatSession, UserUsage } from './types';
-import { AlertCircle, X, Key } from 'lucide-react';
+import { AlertCircle, X, Key, Info } from 'lucide-react';
 
 const STORAGE_KEY = 'sm-ai-partner-sessions-v3';
 const USAGE_KEY = 'sm-ai-usage-v3';
@@ -201,7 +201,6 @@ const App: React.FC = () => {
     try {
       const aiMsgId = (Date.now() + 1).toString();
       const newAiMsg: Message = { id: aiMsgId, role: MessageRole.MODEL, text: "", timestamp: Date.now() };
-      
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, newAiMsg], lastUpdated: Date.now() } : s));
 
       const stream = await sendMessageStreamToGemini(text, historyBeforeNewMsg, isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
@@ -218,10 +217,13 @@ const App: React.FC = () => {
       if (isAutoSpeech && !abortControllerRef.current) speakResponse(accumulatedText, aiMsgId);
     } catch (error: any) { 
       console.error("App Error:", error);
-      const isKeyError = error.message?.toLowerCase().includes("key") || error.message?.toLowerCase().includes("browser");
+      const msg = error.message?.toLowerCase() || "";
+      const isKeyError = msg.includes("key") || msg.includes("browser") || msg.includes("undefined");
+      
       setApiError(isKeyError 
-        ? "API Key Issue: If you just added the key in Vercel, please wait 2 minutes and REDEPLOY your project from the Vercel Dashboard." 
+        ? "API Key Missing in Browser. Your build didn't inject the key correctly." 
         : (error.message || "Connection error."));
+        
       setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.role === 'user' || (m.role === 'model' && m.text !== "")) } : s));
     } finally { 
       setIsLoading(false); 
@@ -278,33 +280,52 @@ const App: React.FC = () => {
 
       <main className="flex-1 flex flex-col relative overflow-hidden h-full touch-auto">
         {apiError && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md animate-in slide-in-from-top-4 duration-300">
-            <div className="bg-white dark:bg-gray-900 border border-red-500/50 p-5 rounded-3xl flex flex-col gap-3 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl text-red-600 shrink-0">
-                  <AlertCircle size={24} />
+          <div className="absolute inset-x-0 top-0 z-[100] p-4 animate-in slide-in-from-top duration-300">
+            <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 border-2 border-red-500 rounded-[2rem] shadow-2xl overflow-hidden backdrop-blur-xl">
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl text-red-600">
+                    <AlertCircle size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none">Vercel Configuration Error</h3>
+                    <p className="text-xs font-bold text-gray-500 mt-1">Please follow these steps exactly:</p>
+                  </div>
+                  <button onClick={() => setApiError(null)} className="ml-auto p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                    <X size={20} />
+                  </button>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Technical Issue</h3>
-                  <p className="text-[13px] font-medium text-gray-500 dark:text-gray-400 leading-tight">{apiError}</p>
+
+                <div className="space-y-3">
+                  <div className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black">1</div>
+                    <p className="text-[13px] font-bold text-gray-700 dark:text-gray-300">
+                      Vercel Dashboard par jayen aur Environment Variables mein <span className="text-blue-600 italic">API_KEY</span> check karein.
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black">2</div>
+                    <p className="text-[13px] font-bold text-gray-700 dark:text-gray-300">
+                      Variable edit karein aur <span className="text-pink-600 underline font-black">Preview</span> aur <span className="text-pink-600 underline font-black">Development</span> ke dabbaon (checkboxes) ko lazmi tick karein.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+                    <Info size={18} className="text-blue-600 shrink-0" />
+                    <p className="text-[12px] font-bold text-blue-800 dark:text-blue-300">
+                      Aap Preview URL (vercel.app) use kar rahe hain, isliye Preview mode enable karna zaroori hai. Save karne ke baad **REDEPLOY** lazmi karein.
+                    </p>
+                  </div>
                 </div>
-                <button onClick={() => setApiError(null)} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
-                  <X size={20} />
+
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full mt-6 py-4 bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all active:scale-95"
+                >
+                  Reload App After Redeploy
                 </button>
               </div>
-              
-              {apiError.includes("REDEPLOY") && (
-                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Key size={14} className="text-blue-600" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">Vercel Guide</span>
-                  </div>
-                  <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300">
-                    Go to <span className="underline italic">Deployments</span> &gt; click <span className="italic">...</span> &gt; <span className="font-black italic">Redeploy</span>. 
-                    This is necessary to inject the key into the website.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         )}

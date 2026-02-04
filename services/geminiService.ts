@@ -23,7 +23,7 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  // Use a fresh instance with the environment key as strictly required
+  // Always create a new instance inside the function to ensure the injected key is used
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
@@ -53,47 +53,36 @@ export const sendMessageStreamToGemini = async (
     return item.role !== history[index - 1].role;
   });
 
-  try {
-    return await ai.models.generateContentStream({
-      model: modelName,
-      contents: [
-        ...validatedHistory,
-        { role: 'user', parts: parts }
-      ],
-      config: config
-    });
-  } catch (err: any) {
-    console.error("Gemini Connection Error:", err);
-    throw new Error(err.message || "Connection failed. Please check your environment configuration.");
-  }
+  return await ai.models.generateContentStream({
+    model: modelName,
+    contents: [
+      ...validatedHistory,
+      { role: 'user', parts: parts }
+    ],
+    config: config
+  });
 };
 
 export const generateAiImage = async (prompt: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [{ parts: [{ text: `Educational high-quality illustration: ${prompt}` }] }],
       config: { imageConfig: { aspectRatio: "1:1" } }
     });
-
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
     }
-  } catch (e) {
-    console.error("Image Gen Error:", e);
-  }
+  } catch (e) { console.error("Image Gen Error:", e); }
   return null;
 };
 
 export const getSpeechAudio = async (text: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   try {
     const cleanText = text.replace(/[*_#`~>|\[\]\(\)]/g, '').substring(0, 1500); 
     if (!cleanText) return null;
-
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: cleanText }] }],
@@ -104,10 +93,6 @@ export const getSpeechAudio = async (text: string) => {
         },
       },
     });
-
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
-  } catch (error) {
-    console.error("TTS Error:", error);
-    return null;
-  }
+  } catch (error) { console.error("TTS Error:", error); return null; }
 };
