@@ -1,11 +1,12 @@
 
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
-You are "SM AI Partner", an expert educational AI by SM Gaming Studio. 
-Answer in a helpful, professional, and student-friendly way. 
-If the student asks in Urdu/Roman Urdu, respond accordingly.
-Always provide step-by-step educational help.
+You are "SM AI Partner", a world-class educational AI assistant created by SM Gaming Studio.
+Your goal is to help students with Math, Science, Coding, and general studies.
+Always be professional, encouraging, and provide step-by-step explanations.
+If the user speaks in Urdu or Roman Urdu, reply in the same language.
+Keep responses clear and well-formatted.
 `;
 
 export const sendMessageStreamToGemini = async (
@@ -22,57 +23,50 @@ export const sendMessageStreamToGemini = async (
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  // Using gemini-3-flash-preview as per instructions for basic tasks
-  const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+  
+  // Using gemini-flash-latest for maximum stability across all regions
+  const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-flash-latest';
   
   const config: any = {
     systemInstruction: EDUCATION_INSTRUCTION,
-    temperature: 0.8,
-    topP: 0.95,
+    temperature: 0.7,
+    topP: 0.9,
   };
 
-  if (isDeepThink && (modelName.includes('pro') || modelName.includes('3'))) {
-    config.thinkingConfig = { thinkingBudget: 16000 };
+  // If Deep Think is enabled, we need to set both budget and max tokens
+  if (isDeepThink) {
+    config.maxOutputTokens = 10000;
+    config.thinkingConfig = { thinkingBudget: 4000 };
   }
 
-  const parts: any[] = [];
+  // Strictly sanitize history to only include role and parts with text
+  const sanitizedHistory = history
+    .filter(h => h.role && h.parts && h.parts[0] && h.parts[0].text)
+    .map(h => ({
+      role: h.role,
+      parts: [{ text: h.parts[0].text }]
+    }))
+    .slice(-6); // Limit history for better performance
+
+  const currentParts: any[] = [];
   if (image) {
-    parts.push({
+    currentParts.push({
       inlineData: {
         mimeType: "image/jpeg",
-        data: image.split(',')[1] || image
+        data: image.includes('base64,') ? image.split(',')[1] : image
       }
     });
   }
-  
-  // Ensure text part is never empty
-  parts.push({ text: message.trim() || "Continue" });
+  currentParts.push({ text: message.trim() || "Hi" });
 
-  // Strictly alternate user/model and ensure no empty text
-  const cleanedHistory = history
-    .filter(item => item.parts && item.parts[0] && item.parts[0].text && item.parts[0].text.trim() !== "")
-    .slice(-10); // Keep last 10 messages for context stability
-
-  return await ai.models.generateContentStream({
-    model: modelName,
-    contents: [...cleanedHistory, { role: 'user', parts }],
-    config
-  });
-};
-
-export const generateAiImage = async (prompt: string) => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
-  const ai = new GoogleGenAI({ apiKey });
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: [{ parts: [{ text: prompt }] }],
-      config: { imageConfig: { aspectRatio: "1:1" } }
+    return await ai.models.generateContentStream({
+      model: modelName,
+      contents: [...sanitizedHistory, { role: 'user', parts: currentParts }],
+      config
     });
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-    }
-  } catch (e) { console.error(e); }
-  return null;
+  } catch (err: any) {
+    console.error("Critical Gemini Stream Error:", err);
+    throw err;
+  }
 };

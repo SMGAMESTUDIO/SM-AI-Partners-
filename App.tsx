@@ -8,10 +8,10 @@ import HistorySidebar from './components/HistorySidebar';
 import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
 import { sendMessageStreamToGemini } from './services/geminiService';
-import { Message, MessageRole, ChatSession, UserUsage } from './types';
-import { AlertCircle, RotateCcw } from 'lucide-react';
+import { Message, MessageRole, ChatSession } from './types';
+import { AlertCircle, RotateCcw, Zap } from 'lucide-react';
 
-const STORAGE_KEY = 'sm-ai-partner-sessions-v4';
+const STORAGE_KEY = 'sm-ai-partner-sessions-final';
 
 const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -26,12 +26,12 @@ const App: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
-  const [apiError, setApiError] = useState<boolean>(false);
+  const [apiErrorType, setApiErrorType] = useState<'key' | 'network' | null>(null);
   
   const abortControllerRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 3000); 
+    const timer = setTimeout(() => setShowSplash(false), 2500); 
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDark(true);
@@ -46,7 +46,17 @@ const App: React.FC = () => {
         if (parsed.length > 0) setCurrentSessionId(parsed[0].id);
       } catch (e) {}
     }
-    return () => clearTimeout(timer);
+    
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -59,42 +69,34 @@ const App: React.FC = () => {
 
   const handleSendMessage = async (text: string, image?: string) => {
     if (!isOnline || isLoading) return;
-    setApiError(false);
+    setApiErrorType(null);
     abortControllerRef.current = false;
 
     let sid = currentSessionId;
     if (!sid) {
       sid = Date.now().toString();
-      const newSession: ChatSession = { id: sid, title: text.substring(0, 30) || "Education Chat", messages: [], lastUpdated: Date.now() };
+      const newSession: ChatSession = { id: sid, title: text.substring(0, 30) || "New Chat", messages: [], lastUpdated: Date.now() };
       setSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(sid);
     }
 
     const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
     
-    // Prepare History before state update for consistency
     const sessionToUse = sessions.find(s => s.id === sid);
     const history = sessionToUse ? sessionToUse.messages.map(m => ({
       role: m.role,
-      parts: [{ text: m.text || "Attached Image" }]
+      parts: [{ text: m.text || "Image Attachment" }]
     })) : [];
 
     setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, userMsg], lastUpdated: Date.now() } : s));
 
     setIsLoading(true);
     const aiId = (Date.now() + 1).toString();
-    
-    try {
-      const aiMsg: Message = { id: aiId, role: MessageRole.MODEL, text: "", timestamp: Date.now() };
-      setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, aiMsg] } : s));
+    const aiMsg: Message = { id: aiId, role: MessageRole.MODEL, text: "", timestamp: Date.now() };
+    setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, aiMsg] } : s));
 
-      const streamResponse = await sendMessageStreamToGemini(
-        text, 
-        history, 
-        isDeepThink, 
-        image, 
-        appMode === 'coding' ? 'coding' : 'education'
-      );
+    try {
+      const streamResponse = await sendMessageStreamToGemini(text, history, isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
       
       let fullText = "";
       for await (const chunk of streamResponse) {
@@ -102,22 +104,23 @@ const App: React.FC = () => {
         const chunkText = chunk.text;
         if (chunkText) {
           fullText += chunkText;
-          // Update AI message text in real-time
           setSessions(prev => prev.map(s => s.id === sid ? { 
             ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: fullText } : m)
           } : s));
         }
       }
 
-      if (!fullText && !abortControllerRef.current) {
-        throw new Error("EMPTY_RESPONSE");
-      }
+      if (!fullText && !abortControllerRef.current) throw new Error("EMPTY");
 
     } catch (e: any) {
-      console.error("Gemini Error:", e);
-      if (e.message?.includes("API_KEY")) setApiError(true);
+      console.error("Chat Execution Error:", e);
+      if (e.message?.includes("API_KEY") || e.message?.includes("403")) {
+        setApiErrorType('key');
+      } else {
+        setApiErrorType('network');
+      }
       
-      const errorText = "Maafi chahta hoon, server se rabta nahi ho pa raha. Baraye meherbani dubara koshish karein.";
+      const errorText = "Maafi chahta hoon, connection mein masla aa raha hai. Baraye meherbani internet check karein ya page refresh karke dubara message bheinjein.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
         ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorText } : m)
       } : s));
@@ -141,15 +144,16 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 flex flex-col relative overflow-hidden">
-        {apiError && (
+        {apiErrorType === 'key' && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm">
-            <div className="bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between animate-bounce">
+            <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
               <div className="flex items-center gap-3">
                 <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase tracking-wider">Connection Error: Refresh App</p>
+                <p className="text-xs font-bold uppercase">API Key Issue Detected</p>
               </div>
-              <button onClick={() => window.location.reload()} className="p-1 hover:bg-white/20 rounded-lg">
-                <RotateCcw size={16} />
+              <p className="text-[10px] opacity-90 leading-tight">Vercel settings mein ja kar API_KEY dobara check karein aur build rebuild karein.</p>
+              <button onClick={() => window.location.reload()} className="bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
+                <RotateCcw size={12} /> Refresh App
               </button>
             </div>
           </div>
