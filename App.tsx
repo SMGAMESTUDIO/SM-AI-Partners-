@@ -41,12 +41,27 @@ const App: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 3000); 
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     }
+
+    const savedSessions = localStorage.getItem(STORAGE_KEY);
+    if (savedSessions) {
+      try {
+        const parsed = JSON.parse(savedSessions);
+        setSessions(parsed);
+        if (parsed.length > 0) setCurrentSessionId(parsed[0].id);
+      } catch (e) {}
+    }
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (sessions.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    }
+  }, [sessions]);
 
   const currentMessages = sessions.find(s => s.id === currentSessionId)?.messages || [];
 
@@ -55,14 +70,24 @@ const App: React.FC = () => {
     setApiError(false);
     abortControllerRef.current = false;
 
-    let sid = currentSessionId || Date.now().toString();
-    if (!currentSessionId) {
-      setSessions([{ id: sid, title: text.substring(0, 20), messages: [], lastUpdated: Date.now() }, ...sessions]);
+    let sid = currentSessionId;
+    if (!sid) {
+      sid = Date.now().toString();
+      const newSession: ChatSession = { id: sid, title: text.substring(0, 25) || "New Chat", messages: [], lastUpdated: Date.now() };
+      setSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(sid);
     }
 
     const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
-    setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, userMsg] } : s));
+    
+    // Get history for context
+    const sessionToUse = sessions.find(s => s.id === sid) || { messages: [] };
+    const history = sessionToUse.messages.map(m => ({
+      role: m.role,
+      parts: [{ text: m.text || (m.image ? "Image provided" : "") }]
+    }));
+
+    setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, userMsg], lastUpdated: Date.now() } : s));
 
     setIsLoading(true);
     try {
@@ -70,18 +95,27 @@ const App: React.FC = () => {
       const aiMsg: Message = { id: aiId, role: MessageRole.MODEL, text: "", timestamp: Date.now() };
       setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, aiMsg] } : s));
 
-      const stream = await sendMessageStreamToGemini(text, [], isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
+      const stream = await sendMessageStreamToGemini(text, history, isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
+      
       let fullText = "";
       for await (const chunk of stream) {
         if (abortControllerRef.current) break;
-        fullText += chunk.text || "";
+        const chunkText = chunk.text || "";
+        fullText += chunkText;
+        
         setSessions(prev => prev.map(s => s.id === sid ? { 
           ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: fullText } : m)
         } : s));
       }
+      
+      if (isAutoSpeech && fullText) {
+        // Speech logic could go here
+      }
     } catch (e: any) {
       if (e.message === "API_KEY_MISSING") setApiError(true);
-      console.error(e);
+      console.error("Gemini Error:", e);
+      // Remove the empty AI message on error
+      setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: s.messages.filter(m => m.text !== "" || m.role === MessageRole.USER) } : s));
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +156,10 @@ const App: React.FC = () => {
           onSpeak={() => {}}
           onStopSpeak={() => {}}
           playingMessageId={playingMessageId}
-          onRegenerate={() => {}}
+          onRegenerate={() => {
+            const lastUserMsg = currentMessages.filter(m => m.role === MessageRole.USER).pop();
+            if (lastUserMsg) handleSendMessage(lastUserMsg.text, lastUserMsg.image);
+          }}
           onSendMessage={handleSendMessage}
         />
 
@@ -142,10 +179,13 @@ const App: React.FC = () => {
         sessions={sessions}
         currentSessionId={currentSessionId}
         onSelectSession={setCurrentSessionId}
-        onDeleteSession={(id) => setSessions(prev => prev.filter(s => s.id !== id))}
-        onNewChat={() => setCurrentSessionId(null)}
-        onStartImageGen={() => setAppMode('image')}
-        onStartCoding={() => setAppMode('coding')}
+        onDeleteSession={(id) => {
+          setSessions(prev => prev.filter(s => s.id !== id));
+          if (currentSessionId === id) setCurrentSessionId(null);
+        }}
+        onNewChat={() => { setCurrentSessionId(null); setAppMode('education'); }}
+        onStartImageGen={() => { setCurrentSessionId(null); setAppMode('image'); }}
+        onStartCoding={() => { setCurrentSessionId(null); setAppMode('coding'); }}
       />
       
       <Footer />

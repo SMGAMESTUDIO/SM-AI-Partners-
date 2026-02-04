@@ -1,6 +1,7 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Message, MessageRole } from '../types';
-import { User, Volume2, VolumeX, Copy, Check, RotateCcw } from 'lucide-react';
+import { User, Volume2, VolumeX, Copy, Check, RotateCcw, BrainCircuit } from 'lucide-react';
 import Logo from './Logo';
 
 interface MessageListProps {
@@ -33,7 +34,16 @@ const MessageList: React.FC<MessageListProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const renderFormattedText = (text: string) => {
+  const renderFormattedText = (text: string, isAiGenerating: boolean) => {
+    if (!text && isAiGenerating) {
+      return (
+        <div className="flex items-center gap-2 text-blue-500/70 italic animate-pulse py-1">
+          <BrainCircuit size={14} className="animate-spin-slow" />
+          <span className="text-xs font-bold uppercase tracking-widest">SM AI is thinking...</span>
+        </div>
+      );
+    }
+    
     return text.split('\n').map((line, i) => (
       <p key={i} className={line.trim() === '' ? 'h-3' : 'mb-1.5 last:mb-0'}>
         {line}
@@ -86,12 +96,12 @@ const MessageList: React.FC<MessageListProps> = ({
                     : 'bg-white dark:bg-gray-800/90 border border-gray-100 dark:border-gray-700 dark:text-gray-200 rounded-tl-none'
                 }`}>
                   <div className="space-y-1">
-                    {renderFormattedText(msg.text)}
-                    {isAiGenerating && <span className="inline-block w-1.5 h-4 bg-blue-500 animate-pulse ml-1 rounded-full align-middle" />}
+                    {renderFormattedText(msg.text, isAiGenerating)}
+                    {isAiGenerating && msg.text && <span className="inline-block w-1.5 h-4 bg-blue-500 animate-pulse ml-1 rounded-full align-middle" />}
                   </div>
                 </div>
                 
-                {msg.role === MessageRole.MODEL && !isAiGenerating && (
+                {msg.role === MessageRole.MODEL && (!isAiGenerating || msg.text) && (
                   <div className="flex items-center gap-1 mt-0.5 opacity-40 hover:opacity-100 transition-opacity ml-1">
                     <button onClick={() => handleCopy(msg.text, msg.id)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                       {copiedId === msg.id ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
@@ -99,7 +109,7 @@ const MessageList: React.FC<MessageListProps> = ({
                     <button onClick={() => onSpeak(msg.text, msg.id)} className={`p-1.5 rounded-lg transition-colors ${playingMessageId === msg.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}>
                       {playingMessageId === msg.id ? <VolumeX size={12} /> : <Volume2 size={12} />}
                     </button>
-                    {isLastMessage && <button onClick={onRegenerate} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"><RotateCcw size={12} /></button>}
+                    {isLastMessage && !isLoading && <button onClick={onRegenerate} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"><RotateCcw size={12} /></button>}
                   </div>
                 )}
               </div>
