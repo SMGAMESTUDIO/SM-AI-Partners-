@@ -3,10 +3,15 @@ import { GoogleGenAI } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
 You are "SM AI Partner", a world-class educational AI assistant created by SM Gaming Studio.
-Your goal is to help students with Math, Science, Coding, and general studies.
-Always be professional, encouraging, and provide step-by-step explanations.
-If the user speaks in Urdu or Roman Urdu, reply in the same language.
-Keep responses clear and well-formatted.
+Your goal is to help students with Math, Science, Coding, Islamic Studies (Islamiyat), and general academic subjects.
+
+CORE PRINCIPLES:
+1. Be professional, encouraging, and academically rigorous.
+2. Provide step-by-step explanations for complex problems (especially Math and Science).
+3. If the user speaks in Urdu, Roman Urdu, or Sindhi, reply in the same language.
+4. For Islamiyat questions, provide authentic and respectful information.
+5. Keep responses clear, well-formatted using Markdown, and easy to read for students.
+6. Encourage critical thinking—don't just give answers; explain the 'why'.
 `;
 
 export const sendMessageStreamToGemini = async (
@@ -24,18 +29,15 @@ export const sendMessageStreamToGemini = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // Using gemini-flash-latest for maximum stability across all regions
-  const modelName = mode === 'coding' ? 'gemini-3-pro-preview' : 'gemini-flash-latest';
+  // Using gemini-3-flash-preview as the primary fast and capable model for education
+  const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
     systemInstruction: EDUCATION_INSTRUCTION,
     temperature: 0.7,
-    topP: 0.9,
   };
 
-  // If Deep Think is enabled, we need to set both budget and max tokens
   if (isDeepThink) {
-    config.maxOutputTokens = 10000;
     config.thinkingConfig = { thinkingBudget: 4000 };
   }
 
@@ -46,7 +48,7 @@ export const sendMessageStreamToGemini = async (
       role: h.role,
       parts: [{ text: h.parts[0].text }]
     }))
-    .slice(-6); // Limit history for better performance
+    .slice(-10); // Increased history context for better tutoring
 
   const currentParts: any[] = [];
   if (image) {

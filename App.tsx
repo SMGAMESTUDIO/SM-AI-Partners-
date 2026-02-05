@@ -9,9 +9,9 @@ import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
 import { sendMessageStreamToGemini } from './services/geminiService';
 import { Message, MessageRole, ChatSession } from './types';
-import { AlertCircle, RotateCcw, Zap } from 'lucide-react';
+import { AlertCircle, RotateCcw } from 'lucide-react';
 
-const STORAGE_KEY = 'sm-ai-partner-sessions-final';
+const STORAGE_KEY = 'sm-ai-partner-sessions-v1';
 
 const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -31,20 +31,25 @@ const App: React.FC = () => {
   const abortControllerRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500); 
+    const splashTimer = setTimeout(() => setShowSplash(false), 2500); 
+    
+    // Load Theme
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     }
 
+    // Load Sessions
     const savedSessions = localStorage.getItem(STORAGE_KEY);
     if (savedSessions) {
       try {
         const parsed = JSON.parse(savedSessions);
         setSessions(parsed);
         if (parsed.length > 0) setCurrentSessionId(parsed[0].id);
-      } catch (e) {}
+      } catch (e) {
+        console.error("Failed to load sessions:", e);
+      }
     }
     
     const handleOnline = () => setIsOnline(true);
@@ -53,7 +58,7 @@ const App: React.FC = () => {
     window.addEventListener('offline', handleOffline);
     
     return () => {
-      clearTimeout(timer);
+      clearTimeout(splashTimer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -68,14 +73,19 @@ const App: React.FC = () => {
   const currentMessages = sessions.find(s => s.id === currentSessionId)?.messages || [];
 
   const handleSendMessage = async (text: string, image?: string) => {
-    if (!isOnline || isLoading) return;
+    if (!isOnline || isLoading || (!text.trim() && !image)) return;
     setApiErrorType(null);
     abortControllerRef.current = false;
 
     let sid = currentSessionId;
     if (!sid) {
       sid = Date.now().toString();
-      const newSession: ChatSession = { id: sid, title: text.substring(0, 30) || "New Chat", messages: [], lastUpdated: Date.now() };
+      const newSession: ChatSession = { 
+        id: sid, 
+        title: text.substring(0, 40) || "Educational Chat", 
+        messages: [], 
+        lastUpdated: Date.now() 
+      };
       setSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(sid);
     }
@@ -85,7 +95,7 @@ const App: React.FC = () => {
     const sessionToUse = sessions.find(s => s.id === sid);
     const history = sessionToUse ? sessionToUse.messages.map(m => ({
       role: m.role,
-      parts: [{ text: m.text || "Image Attachment" }]
+      parts: [{ text: m.text || "Attached Image" }]
     })) : [];
 
     setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, userMsg], lastUpdated: Date.now() } : s));
@@ -110,17 +120,17 @@ const App: React.FC = () => {
         }
       }
 
-      if (!fullText && !abortControllerRef.current) throw new Error("EMPTY");
+      if (!fullText && !abortControllerRef.current) throw new Error("EMPTY_RESPONSE");
 
     } catch (e: any) {
-      console.error("Chat Execution Error:", e);
+      console.error("Gemini Error:", e);
       if (e.message?.includes("API_KEY") || e.message?.includes("403")) {
         setApiErrorType('key');
       } else {
         setApiErrorType('network');
       }
       
-      const errorText = "Maafi chahta hoon, connection mein masla aa raha hai. Baraye meherbani internet check karein ya page refresh karke dubara message bheinjein.";
+      const errorText = "Mazarat! Connection mein masla aa raha hai. Baraye meherbani internet check karein aur refresh karke dubara koshish karein.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
         ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorText } : m)
       } : s));
@@ -129,31 +139,59 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSpeak = (text: string, id: string) => {
+    if (playingMessageId === id) {
+      window.speechSynthesis.cancel();
+      setPlayingMessageId(null);
+      return;
+    }
+    
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    // Simple language detection - if contains Urdu characters
+    if (/[\u0600-\u06FF]/.test(text)) {
+      utterance.lang = 'ur-PK';
+    } else {
+      utterance.lang = 'en-US';
+    }
+    
+    utterance.onend = () => setPlayingMessageId(null);
+    utterance.onerror = () => setPlayingMessageId(null);
+    
+    setPlayingMessageId(id);
+    window.speechSynthesis.speak(utterance);
+  };
+
   if (showSplash) return <SplashScreen />;
   if (!isOnline) return <OfflineNotice />;
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-white dark:bg-gray-950 transition-colors fixed inset-0 overflow-hidden">
+    <div className="flex flex-col h-[100dvh] w-full bg-white dark:bg-gray-950 transition-colors fixed inset-0 overflow-hidden font-sans">
       <Header 
         isDark={isDark} isAutoSpeech={isAutoSpeech} isDeepThink={isDeepThink} isPremium={false}
-        toggleTheme={() => { setIsDark(!isDark); document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', !isDark ? 'dark' : 'light'); }}
+        toggleTheme={() => { 
+          const nextDark = !isDark;
+          setIsDark(nextDark); 
+          document.documentElement.classList.toggle('dark', nextDark); 
+          localStorage.setItem('theme', nextDark ? 'dark' : 'light'); 
+        }}
         toggleAutoSpeech={() => setIsAutoSpeech(!isAutoSpeech)}
         toggleDeepThink={() => setIsDeepThink(!isDeepThink)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenPremium={() => {}}
       />
 
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main className="flex-1 flex flex-col relative overflow-hidden max-w-7xl mx-auto w-full">
         {apiErrorType === 'key' && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm">
             <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
               <div className="flex items-center gap-3">
                 <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase">API Key Issue Detected</p>
+                <p className="text-xs font-bold uppercase tracking-wider">System Config Error</p>
               </div>
-              <p className="text-[10px] opacity-90 leading-tight">Vercel settings mein ja kar API_KEY dobara check karein aur build rebuild karein.</p>
+              <p className="text-[10px] opacity-90 leading-tight">API Key is missing or invalid. Please configure your environment variables.</p>
               <button onClick={() => window.location.reload()} className="bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
-                <RotateCcw size={12} /> Refresh App
+                <RotateCcw size={12} /> Refresh
               </button>
             </div>
           </div>
@@ -162,8 +200,8 @@ const App: React.FC = () => {
         <MessageList 
           messages={currentMessages} 
           isLoading={isLoading}
-          onSpeak={() => {}}
-          onStopSpeak={() => {}}
+          onSpeak={handleSpeak}
+          onStopSpeak={() => { window.speechSynthesis.cancel(); setPlayingMessageId(null); }}
           playingMessageId={playingMessageId}
           onRegenerate={() => {
             const lastUserMsg = currentMessages.filter(m => m.role === MessageRole.USER).pop();
@@ -174,7 +212,7 @@ const App: React.FC = () => {
 
         <TypewriterInput 
           onSend={handleSendMessage}
-          onMicClick={() => {}}
+          onMicClick={() => setIsListening(!isListening)}
           onStop={() => { abortControllerRef.current = true; setIsLoading(false); }}
           isListening={isListening}
           isLoading={isLoading}
