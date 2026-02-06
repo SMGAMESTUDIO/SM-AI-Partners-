@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
@@ -20,18 +21,18 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  // Ensure the API key is accessed directly from process.env.API_KEY as per guidelines.
-  // The value is injected by the bundler via the vite.config.ts 'define' block.
+  // Use the API key directly from process.env.API_KEY
   const apiKey = process.env.API_KEY;
   
-  // Robust check for various ways an undefined environment variable might manifest in the browser
-  if (!apiKey || apiKey === "undefined" || apiKey === "" || apiKey === "null") {
-    throw new Error("API_KEY_MISSING: The Gemini API key is not configured in the environment variables.");
+  // Verify API Key exists and is not the literal string "undefined" (common Vite build-time issue)
+  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "") {
+    throw new Error("API_KEY_NOT_SET");
   }
 
+  // Initialize with the standard pattern
   const ai = new GoogleGenAI({ apiKey });
   
-  // Model selection based on task and user preference
+  // Select correct model: gemini-3-pro-preview for complex tasks (Deep Think), flash for basic.
   const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
@@ -39,22 +40,23 @@ export const sendMessageStreamToGemini = async (
     temperature: 0.7,
   };
 
+  // Only apply thinkingConfig for Gemini 3 series models as per guidelines
   if (isDeepThink) {
     config.thinkingConfig = { thinkingBudget: 4000 };
   }
 
-  // Ensure history parts are correctly structured for the SDK
+  // Format history for the SDK
   const sanitizedHistory = history
     .filter(h => h.role && h.parts && h.parts.length > 0)
     .map(h => ({
       role: h.role === 'user' ? 'user' : 'model',
       parts: h.parts.map((p: any) => ({ text: p.text || "" }))
     }))
-    .slice(-10);
+    .slice(-8); // Small context window for performance
 
   const currentParts: any[] = [];
   
-  // Handle image part if provided
+  // Handle image if present
   if (image) {
     const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
     currentParts.push({
@@ -65,8 +67,8 @@ export const sendMessageStreamToGemini = async (
     });
   }
   
-  // Add text part
-  currentParts.push({ text: message.trim() || "Hi" });
+  // Add message text
+  currentParts.push({ text: message.trim() || "Hello" });
 
   try {
     return await ai.models.generateContentStream({
@@ -78,7 +80,7 @@ export const sendMessageStreamToGemini = async (
       config
     });
   } catch (err: any) {
-    console.error("Gemini Service Error:", err);
+    console.error("Gemini API Invocation Error:", err);
     throw err;
   }
 };

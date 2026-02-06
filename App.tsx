@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -32,14 +33,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const splashTimer = setTimeout(() => setShowSplash(false), 2500); 
     
-    // Load Theme
+    // Theme Loading
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     }
 
-    // Load Sessions
+    // Sessions Loading
     const savedSessions = localStorage.getItem(STORAGE_KEY);
     if (savedSessions) {
       try {
@@ -49,7 +50,7 @@ const App: React.FC = () => {
           if (parsed.length > 0) setCurrentSessionId(parsed[0].id);
         }
       } catch (e) {
-        console.error("Failed to load sessions:", e);
+        console.error("Session load error:", e);
       }
     }
     
@@ -84,7 +85,7 @@ const App: React.FC = () => {
       sid = Date.now().toString();
       const newSession: ChatSession = { 
         id: sid, 
-        title: text.substring(0, 40) || "Educational Chat", 
+        title: text.substring(0, 40) || "New Chat", 
         messages: [], 
         lastUpdated: Date.now() 
       };
@@ -94,7 +95,6 @@ const App: React.FC = () => {
 
     const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
     
-    // Preparation of context
     const currentSession = sessions.find(s => s.id === sid);
     const historyContext = currentSession ? currentSession.messages.map(m => ({
       role: m.role,
@@ -130,22 +130,22 @@ const App: React.FC = () => {
       }
 
       if (!fullText && !abortControllerRef.current) {
-        throw new Error("NO_CONTENT_RECEIVED");
+        throw new Error("API_NO_RESPONSE");
       }
 
     } catch (e: any) {
-      console.error("Chat Error:", e);
-      const errorMessage = e.message || "";
+      console.error("Gemini Request Failed:", e);
+      const errStr = String(e);
       
-      if (errorMessage.includes("API_KEY") || errorMessage.includes("403") || errorMessage.includes("401")) {
+      if (errStr.includes("API_KEY_NOT_SET") || errStr.includes("403") || errStr.includes("401")) {
         setApiErrorType('key');
       } else {
         setApiErrorType('network');
       }
       
-      const userFriendlyError = "Mazarat! AI se rabta nahi ho pa raha. Baraye meherbani internet ya API key settings check karein.";
+      const errorNote = "Mazarat! AI response nahi de raha. Apne Dashboard mein API KEY check karein ya internet check karein.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
-        ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: userFriendlyError } : m)
+        ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorNote } : m)
       } : s));
     } finally {
       setIsLoading(false);
@@ -199,11 +199,11 @@ const App: React.FC = () => {
             <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
               <div className="flex items-center gap-3">
                 <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase tracking-wider">Configuration Issue</p>
+                <p className="text-xs font-bold uppercase tracking-wider">Config Required</p>
               </div>
-              <p className="text-[10px] opacity-90 leading-tight">Gemini API key is invalid or not found. Check your environment variables on Vercel/Local.</p>
-              <button onClick={() => window.location.reload()} className="bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
-                <RotateCcw size={12} /> Retry
+              <p className="text-[10px] opacity-90 leading-tight">API Key check karein. Cloudflare ya Vercel Dashboard mein 'API_KEY' name se variable add karein.</p>
+              <button onClick={() => window.location.reload()} className="mt-2 bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
+                <RotateCcw size={12} /> Retry Connection
               </button>
             </div>
           </div>
