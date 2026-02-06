@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   define: {
-    // Cloudflare dashboard uses VITE_GEMINI_API_KEY as seen in your screenshot.
-    // We map it to process.env.API_KEY so the service can use it.
+    // This maps the environment variable from your Cloudflare dashboard 
+    // to the process.env.API_KEY that your code expects.
     'process.env.API_KEY': JSON.stringify(process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || ""),
   },
   build: {
