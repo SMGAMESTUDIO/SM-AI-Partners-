@@ -20,14 +20,15 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  // Directly use process.env.API_KEY as per the required pattern.
-  // The value is injected by the bundler via the vite.config.ts 'define' block.
+  // Accessing the key injected by Vite
   const apiKey = process.env.API_KEY;
 
-  // Initialize strictly following the guidelines
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
-  // Model selection: gemini-3-pro-preview for Deep Think, flash for basic.
   const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
@@ -35,23 +36,20 @@ export const sendMessageStreamToGemini = async (
     temperature: 0.7,
   };
 
-  // Apply thinkingConfig only if requested and using supported models
   if (isDeepThink) {
     config.thinkingConfig = { thinkingBudget: 4000 };
   }
 
-  // Format history for the SDK
   const sanitizedHistory = history
     .filter(h => h.role && h.parts && h.parts.length > 0)
     .map(h => ({
       role: h.role === 'user' ? 'user' : 'model',
       parts: h.parts.map((p: any) => ({ text: p.text || "" }))
     }))
-    .slice(-10); // Use 10 messages for better context
+    .slice(-10);
 
   const currentParts: any[] = [];
   
-  // Handle image if present
   if (image) {
     const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
     currentParts.push({
@@ -62,7 +60,6 @@ export const sendMessageStreamToGemini = async (
     });
   }
   
-  // Add message text
   currentParts.push({ text: message.trim() || "Hi" });
 
   try {
@@ -75,7 +72,7 @@ export const sendMessageStreamToGemini = async (
       config
     });
   } catch (err: any) {
-    console.error("Gemini API stream initiation failed:", err);
+    console.error("Gemini Error:", err);
     throw err;
   }
 };

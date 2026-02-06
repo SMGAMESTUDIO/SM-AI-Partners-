@@ -32,14 +32,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const splashTimer = setTimeout(() => setShowSplash(false), 2500); 
     
-    // Theme Loading
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     }
 
-    // Sessions Loading
     const savedSessions = localStorage.getItem(STORAGE_KEY);
     if (savedSessions) {
       try {
@@ -129,17 +127,16 @@ const App: React.FC = () => {
       }
 
     } catch (e: any) {
-      console.error("Chat Execution Error:", e);
+      console.error("Chat Error:", e);
       const errStr = String(e).toLowerCase();
       
-      // Specifically look for authentication/key errors
-      if (errStr.includes("api key") || errStr.includes("403") || errStr.includes("401") || errStr.includes("400")) {
+      if (errStr.includes("key") || errStr.includes("403") || errStr.includes("401") || errStr.includes("auth")) {
         setApiErrorType('key');
       } else {
         setApiErrorType('network');
       }
       
-      const errorNote = "Mazarat! AI response nahi de raha. Baraye meherbani internet ya API settings check karein.";
+      const errorNote = "Mazarat! AI se rabta nahi ho pa raha. Dashboard mein 'VITE_GEMINI_API_KEY' check karein.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
         ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorNote } : m)
       } : s));
@@ -154,18 +151,10 @@ const App: React.FC = () => {
       setPlayingMessageId(null);
       return;
     }
-    
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    if (/[\u0600-\u06FF]/.test(text)) {
-      utterance.lang = 'ur-PK';
-    } else {
-      utterance.lang = 'en-US';
-    }
-    
+    utterance.lang = /[\u0600-\u06FF]/.test(text) ? 'ur-PK' : 'en-US';
     utterance.onend = () => setPlayingMessageId(null);
-    utterance.onerror = () => setPlayingMessageId(null);
-    
     setPlayingMessageId(id);
     window.speechSynthesis.speak(utterance);
   };
@@ -195,9 +184,9 @@ const App: React.FC = () => {
             <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
               <div className="flex items-center gap-3">
                 <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase tracking-wider">API Connection Failed</p>
+                <p className="text-xs font-bold uppercase tracking-wider">Configuration Issue</p>
               </div>
-              <p className="text-[10px] opacity-90 leading-tight">Gemini API Key sahi nahi hai ya configured nahi hai. Dashboard check karein.</p>
+              <p className="text-[10px] opacity-90 leading-tight">Gemini API Key missing or invalid. Dashboard (Cloudflare/Vercel) mein VITE_GEMINI_API_KEY confirm karein.</p>
               <button onClick={() => window.location.reload()} className="mt-2 bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
                 <RotateCcw size={12} /> Reload App
               </button>
