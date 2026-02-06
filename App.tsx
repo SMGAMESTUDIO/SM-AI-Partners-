@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -45,8 +44,10 @@ const App: React.FC = () => {
     if (savedSessions) {
       try {
         const parsed = JSON.parse(savedSessions);
-        setSessions(parsed);
-        if (parsed.length > 0) setCurrentSessionId(parsed[0].id);
+        if (Array.isArray(parsed)) {
+          setSessions(parsed);
+          if (parsed.length > 0) setCurrentSessionId(parsed[0].id);
+        }
       } catch (e) {
         console.error("Failed to load sessions:", e);
       }
@@ -74,6 +75,7 @@ const App: React.FC = () => {
 
   const handleSendMessage = async (text: string, image?: string) => {
     if (!isOnline || isLoading || (!text.trim() && !image)) return;
+    
     setApiErrorType(null);
     abortControllerRef.current = false;
 
@@ -92,10 +94,11 @@ const App: React.FC = () => {
 
     const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
     
-    const sessionToUse = sessions.find(s => s.id === sid);
-    const history = sessionToUse ? sessionToUse.messages.map(m => ({
+    // Preparation of context
+    const currentSession = sessions.find(s => s.id === sid);
+    const historyContext = currentSession ? currentSession.messages.map(m => ({
       role: m.role,
-      parts: [{ text: m.text || "Attached Image" }]
+      parts: [{ text: m.text || "" }]
     })) : [];
 
     setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, userMsg], lastUpdated: Date.now() } : s));
@@ -106,7 +109,13 @@ const App: React.FC = () => {
     setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, aiMsg] } : s));
 
     try {
-      const streamResponse = await sendMessageStreamToGemini(text, history, isDeepThink, image, appMode === 'coding' ? 'coding' : 'education');
+      const streamResponse = await sendMessageStreamToGemini(
+        text, 
+        historyContext, 
+        isDeepThink, 
+        image, 
+        appMode === 'coding' ? 'coding' : 'education'
+      );
       
       let fullText = "";
       for await (const chunk of streamResponse) {
@@ -120,19 +129,23 @@ const App: React.FC = () => {
         }
       }
 
-      if (!fullText && !abortControllerRef.current) throw new Error("EMPTY_RESPONSE");
+      if (!fullText && !abortControllerRef.current) {
+        throw new Error("NO_CONTENT_RECEIVED");
+      }
 
     } catch (e: any) {
-      console.error("Gemini Error:", e);
-      if (e.message?.includes("API_KEY") || e.message?.includes("403")) {
+      console.error("Chat Error:", e);
+      const errorMessage = e.message || "";
+      
+      if (errorMessage.includes("API_KEY") || errorMessage.includes("403") || errorMessage.includes("401")) {
         setApiErrorType('key');
       } else {
         setApiErrorType('network');
       }
       
-      const errorText = "Mazarat! Connection mein masla aa raha hai. Baraye meherbani internet check karein aur refresh karke dubara koshish karein.";
+      const userFriendlyError = "Mazarat! AI se rabta nahi ho pa raha. Baraye meherbani internet ya API key settings check karein.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
-        ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorText } : m)
+        ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: userFriendlyError } : m)
       } : s));
     } finally {
       setIsLoading(false);
@@ -148,7 +161,6 @@ const App: React.FC = () => {
     
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    // Simple language detection - if contains Urdu characters
     if (/[\u0600-\u06FF]/.test(text)) {
       utterance.lang = 'ur-PK';
     } else {
@@ -187,11 +199,11 @@ const App: React.FC = () => {
             <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
               <div className="flex items-center gap-3">
                 <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase tracking-wider">System Config Error</p>
+                <p className="text-xs font-bold uppercase tracking-wider">Configuration Issue</p>
               </div>
-              <p className="text-[10px] opacity-90 leading-tight">API Key is missing or invalid. Please configure your environment variables.</p>
+              <p className="text-[10px] opacity-90 leading-tight">Gemini API key is invalid or not found. Check your environment variables on Vercel/Local.</p>
               <button onClick={() => window.location.reload()} className="bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
-                <RotateCcw size={12} /> Refresh
+                <RotateCcw size={12} /> Retry
               </button>
             </div>
           </div>
