@@ -1,10 +1,9 @@
-
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   define: {
-    // Standard injection pattern for environment variables
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ""),
+    // Injection of environment variables for the client
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY),
   },
   build: {
     outDir: 'dist',

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -129,21 +128,18 @@ const App: React.FC = () => {
         }
       }
 
-      if (!fullText && !abortControllerRef.current) {
-        throw new Error("API_NO_RESPONSE");
-      }
-
     } catch (e: any) {
-      console.error("Gemini Request Failed:", e);
-      const errStr = String(e);
+      console.error("Chat Execution Error:", e);
+      const errStr = String(e).toLowerCase();
       
-      if (errStr.includes("API_KEY_NOT_SET") || errStr.includes("403") || errStr.includes("401")) {
+      // Specifically look for authentication/key errors
+      if (errStr.includes("api key") || errStr.includes("403") || errStr.includes("401") || errStr.includes("400")) {
         setApiErrorType('key');
       } else {
         setApiErrorType('network');
       }
       
-      const errorNote = "Mazarat! AI response nahi de raha. Apne Dashboard mein API KEY check karein ya internet check karein.";
+      const errorNote = "Mazarat! AI response nahi de raha. Baraye meherbani internet ya API settings check karein.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
         ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorNote } : m)
       } : s));
@@ -199,11 +195,11 @@ const App: React.FC = () => {
             <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
               <div className="flex items-center gap-3">
                 <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase tracking-wider">Config Required</p>
+                <p className="text-xs font-bold uppercase tracking-wider">API Connection Failed</p>
               </div>
-              <p className="text-[10px] opacity-90 leading-tight">API Key check karein. Cloudflare ya Vercel Dashboard mein 'API_KEY' name se variable add karein.</p>
+              <p className="text-[10px] opacity-90 leading-tight">Gemini API Key sahi nahi hai ya configured nahi hai. Dashboard check karein.</p>
               <button onClick={() => window.location.reload()} className="mt-2 bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
-                <RotateCcw size={12} /> Retry Connection
+                <RotateCcw size={12} /> Reload App
               </button>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
@@ -7,10 +6,10 @@ Your goal is to help students with Math, Science, Coding, Islamic Studies (Islam
 
 CORE PRINCIPLES:
 1. Be professional, encouraging, and academically rigorous.
-2. Provide step-by-step explanations for complex problems (especially Math and Science).
+2. Provide step-by-step explanations for complex problems.
 3. If the user speaks in Urdu, Roman Urdu, or Sindhi, reply in the same language.
 4. For Islamiyat questions, provide authentic and respectful information.
-5. Keep responses clear, well-formatted using Markdown, and easy to read for students.
+5. Keep responses clear and well-formatted using Markdown.
 6. Encourage critical thinking—don't just give answers; explain the 'why'.
 `;
 
@@ -21,18 +20,14 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' = 'education'
 ) => {
-  // Use the API key directly from process.env.API_KEY
+  // Directly use process.env.API_KEY as per the required pattern.
+  // The value is injected by the bundler via the vite.config.ts 'define' block.
   const apiKey = process.env.API_KEY;
-  
-  // Verify API Key exists and is not the literal string "undefined" (common Vite build-time issue)
-  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "") {
-    throw new Error("API_KEY_NOT_SET");
-  }
 
-  // Initialize with the standard pattern
-  const ai = new GoogleGenAI({ apiKey });
+  // Initialize strictly following the guidelines
+  const ai = new GoogleGenAI({ apiKey: apiKey });
   
-  // Select correct model: gemini-3-pro-preview for complex tasks (Deep Think), flash for basic.
+  // Model selection: gemini-3-pro-preview for Deep Think, flash for basic.
   const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const config: any = {
@@ -40,7 +35,7 @@ export const sendMessageStreamToGemini = async (
     temperature: 0.7,
   };
 
-  // Only apply thinkingConfig for Gemini 3 series models as per guidelines
+  // Apply thinkingConfig only if requested and using supported models
   if (isDeepThink) {
     config.thinkingConfig = { thinkingBudget: 4000 };
   }
@@ -52,7 +47,7 @@ export const sendMessageStreamToGemini = async (
       role: h.role === 'user' ? 'user' : 'model',
       parts: h.parts.map((p: any) => ({ text: p.text || "" }))
     }))
-    .slice(-8); // Small context window for performance
+    .slice(-10); // Use 10 messages for better context
 
   const currentParts: any[] = [];
   
@@ -68,7 +63,7 @@ export const sendMessageStreamToGemini = async (
   }
   
   // Add message text
-  currentParts.push({ text: message.trim() || "Hello" });
+  currentParts.push({ text: message.trim() || "Hi" });
 
   try {
     return await ai.models.generateContentStream({
@@ -80,7 +75,7 @@ export const sendMessageStreamToGemini = async (
       config
     });
   } catch (err: any) {
-    console.error("Gemini API Invocation Error:", err);
+    console.error("Gemini API stream initiation failed:", err);
     throw err;
   }
 };
