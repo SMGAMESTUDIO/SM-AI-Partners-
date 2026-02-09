@@ -1,16 +1,17 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
-You are "SM AI Partner", a world-class educational AI assistant created by SM Gaming Studio.
-Your goal is to help students with Math, Science, Coding, Islamic Studies (Islamiyat), and general academic subjects.
+You are "SM AI Partner", a world-class professional educational AI assistant developed for students.
+Your expertise covers School, College, and University levels (Math, Physics, Chemistry, Biology, Coding, and Islamic Studies).
 
-CORE PRINCIPLES:
-1. Be professional, encouraging, and academically rigorous.
-2. Provide step-by-step explanations for complex problems.
-3. If the user speaks in Urdu, Roman Urdu, or Sindhi, reply in the same language.
-4. For Islamiyat questions, provide authentic and respectful information.
-5. Keep responses clear and well-formatted using Markdown.
-6. Encourage critical thinking—don't just give answers; explain the 'why'.
+CORE RULES:
+1. TUTOR MODE: Never give only the final answer. Always provide a step-by-step logical explanation.
+2. LANGUAGE: If the user asks in Urdu, Roman Urdu, or Sindhi, respond in that specific language/script accurately.
+3. MATH/SCIENCE: Use clear formatting for formulas. Break down complex calculations into manageable steps.
+4. TONE: Professional, encouraging, and academic.
+5. ISLAMIYAT: Provide authentic information with a focus on ethics and historical context when asked.
+6. IMAGES: If an image is provided (homework/diagram), analyze it thoroughly and explain the contents.
 `;
 
 export const sendMessageStreamToGemini = async (
@@ -18,61 +19,62 @@ export const sendMessageStreamToGemini = async (
   history: any[] = [],
   isDeepThink: boolean = false,
   image?: string,
-  mode: 'education' | 'coding' = 'education'
+  mode: 'education' | 'coding' | 'image' = 'education'
 ) => {
-  // Accessing the key injected by Vite
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
+  // Use pro model for Deep Think (Complex Reasoning) or Flash for standard speed
   const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
-  const config: any = {
-    systemInstruction: EDUCATION_INSTRUCTION,
-    temperature: 0.7,
-  };
-
-  if (isDeepThink) {
-    config.thinkingConfig = { thinkingBudget: 4000 };
-  }
-
-  const sanitizedHistory = history
-    .filter(h => h.role && h.parts && h.parts.length > 0)
-    .map(h => ({
-      role: h.role === 'user' ? 'user' : 'model',
-      parts: h.parts.map((p: any) => ({ text: p.text || "" }))
-    }))
-    .slice(-10);
-
-  const currentParts: any[] = [];
+  const parts: any[] = [];
   
   if (image) {
-    const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
-    currentParts.push({
+    const [mimeTypePart, data] = image.split(',');
+    const actualMimeType = mimeTypePart.split(':')[1].split(';')[0];
+    parts.push({
       inlineData: {
-        mimeType: "image/jpeg",
-        data: base64Data
+        mimeType: actualMimeType,
+        data: data
       }
     });
   }
   
-  currentParts.push({ text: message.trim() || "Hi" });
+  parts.push({ text: message || "Analyze this." });
 
-  try {
-    return await ai.models.generateContentStream({
-      model: modelName,
-      contents: [
-        ...sanitizedHistory, 
-        { role: 'user', parts: currentParts }
-      ],
-      config
-    });
-  } catch (err: any) {
-    console.error("Gemini Error:", err);
-    throw err;
+  const response = await ai.models.generateContentStream({
+    model: modelName,
+    contents: [{ role: 'user', parts }],
+    config: {
+      systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus heavily on clean code principles and bug explanation." : ""),
+      temperature: 0.7,
+      topP: 0.95,
+      ...(isDeepThink && { thinkingConfig: { thinkingBudget: 16000 } })
+    },
+  });
+
+  return response;
+};
+
+export const generateImageWithGemini = async (prompt: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: [{ 
+      parts: [{ text: `Generate a high-quality educational illustration or professional image for: ${prompt}` }] 
+    }],
+    config: {
+      imageConfig: {
+        aspectRatio: "1:1"
+      }
+    },
+  });
+
+  for (const part of response.candidates[0].content.parts) {
+    if (part.inlineData) {
+      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    }
   }
+  
+  throw new Error("No image generated");
 };

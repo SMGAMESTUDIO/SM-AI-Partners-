@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Sun, Moon, Menu, Volume2, VolumeX, Brain } from 'lucide-react';
+import { Sun, Moon, Menu, Volume2, VolumeX, Brain, Code, GraduationCap, ImageIcon } from 'lucide-react';
 import Logo from './Logo';
 
 interface HeaderProps {
@@ -7,6 +8,7 @@ interface HeaderProps {
   isAutoSpeech: boolean;
   isDeepThink: boolean;
   isPremium: boolean;
+  appMode: 'education' | 'coding' | 'image';
   toggleTheme: () => void;
   toggleAutoSpeech: () => void;
   toggleDeepThink: () => void;
@@ -18,13 +20,28 @@ const Header: React.FC<HeaderProps> = ({
   isDark, 
   isAutoSpeech, 
   isDeepThink,
-  isPremium,
+  appMode,
   toggleTheme, 
   toggleAutoSpeech, 
   toggleDeepThink,
   onOpenHistory,
-  onOpenPremium
 }) => {
+  const getModeIcon = () => {
+    switch(appMode) {
+      case 'coding': return <Code size={14} />;
+      case 'image': return <ImageIcon size={14} />;
+      default: return <GraduationCap size={14} />;
+    }
+  };
+
+  const getModeLabel = () => {
+    switch(appMode) {
+      case 'coding': return 'Coding Mode';
+      case 'image': return 'Image Gen';
+      default: return 'Education';
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/95 dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 transition-colors shadow-sm">
       <div className="max-w-7xl mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between">
@@ -47,7 +64,12 @@ const Header: React.FC<HeaderProps> = ({
                 <span className="text-pink-500">AI</span>
                 <span className="text-gray-900 dark:text-gray-100 ml-0.5 md:ml-1 uppercase">Partner</span>
               </h1>
-              <span className="hidden md:block text-[7px] font-bold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase">Educational Assistant</span>
+              <div className="flex items-center gap-1">
+                <div className={`w-1 h-1 rounded-full ${appMode === 'image' ? 'bg-pink-500' : 'bg-blue-500'} animate-pulse`}></div>
+                <span className="text-[7px] font-bold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase flex items-center gap-1">
+                  {getModeIcon()} {getModeLabel()}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -62,7 +84,7 @@ const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Brain size={16} className={isDeepThink ? 'animate-pulse' : ''} />
-            <span className="hidden lg:inline text-[10px] font-black ml-2 uppercase tracking-widest">Deep Think</span>
+            <span className="hidden lg:inline text-[10px] font-black ml-2 uppercase tracking-widest">Reasoning</span>
           </button>
 
           <button

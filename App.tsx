@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -6,11 +7,10 @@ import TypewriterInput from './components/TypewriterInput';
 import HistorySidebar from './components/HistorySidebar';
 import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
-import { sendMessageStreamToGemini } from './services/geminiService';
+import { sendMessageStreamToGemini, generateImageWithGemini } from './services/geminiService';
 import { Message, MessageRole, ChatSession } from './types';
-import { AlertCircle, RotateCcw } from 'lucide-react';
 
-const STORAGE_KEY = 'sm-ai-partner-sessions-v1';
+const STORAGE_KEY = 'sm-ai-partner-sessions-v2';
 
 const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -25,12 +25,11 @@ const App: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
-  const [apiErrorType, setApiErrorType] = useState<'key' | 'network' | null>(null);
   
   const abortControllerRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const splashTimer = setTimeout(() => setShowSplash(false), 2500); 
+    const splashTimer = setTimeout(() => setShowSplash(false), 2000); 
     
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -74,7 +73,6 @@ const App: React.FC = () => {
   const handleSendMessage = async (text: string, image?: string) => {
     if (!isOnline || isLoading || (!text.trim() && !image)) return;
     
-    setApiErrorType(null);
     abortControllerRef.current = false;
 
     let sid = currentSessionId;
@@ -82,7 +80,7 @@ const App: React.FC = () => {
       sid = Date.now().toString();
       const newSession: ChatSession = { 
         id: sid, 
-        title: text.substring(0, 40) || "New Chat", 
+        title: text.substring(0, 40) || (image ? "Image Analysis" : "New Chat"), 
         messages: [], 
         lastUpdated: Date.now() 
       };
@@ -91,13 +89,6 @@ const App: React.FC = () => {
     }
 
     const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text, timestamp: Date.now(), image };
-    
-    const currentSession = sessions.find(s => s.id === sid);
-    const historyContext = currentSession ? currentSession.messages.map(m => ({
-      role: m.role,
-      parts: [{ text: m.text || "" }]
-    })) : [];
-
     setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, userMsg], lastUpdated: Date.now() } : s));
 
     setIsLoading(true);
@@ -106,37 +97,40 @@ const App: React.FC = () => {
     setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, aiMsg] } : s));
 
     try {
-      const streamResponse = await sendMessageStreamToGemini(
-        text, 
-        historyContext, 
-        isDeepThink, 
-        image, 
-        appMode === 'coding' ? 'coding' : 'education'
-      );
-      
-      let fullText = "";
-      for await (const chunk of streamResponse) {
-        if (abortControllerRef.current) break;
-        const chunkText = chunk.text;
-        if (chunkText) {
-          fullText += chunkText;
-          setSessions(prev => prev.map(s => s.id === sid ? { 
-            ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: fullText } : m)
-          } : s));
+      if (appMode === 'image' && text.trim()) {
+        const generatedImage = await generateImageWithGemini(text);
+        setSessions(prev => prev.map(s => s.id === sid ? { 
+          ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: "Your professional image is ready:", image: generatedImage } : m)
+        } : s));
+      } else {
+        const streamResponse = await sendMessageStreamToGemini(
+          text, 
+          [], 
+          isDeepThink, 
+          image, 
+          appMode
+        );
+        
+        let fullText = "";
+        for await (const chunk of streamResponse) {
+          if (abortControllerRef.current) break;
+          const chunkText = chunk.text;
+          if (chunkText) {
+            fullText += chunkText;
+            setSessions(prev => prev.map(s => s.id === sid ? { 
+              ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: fullText } : m)
+            } : s));
+          }
+        }
+        
+        if (isAutoSpeech && fullText) {
+          handleSpeak(fullText, aiId);
         }
       }
 
     } catch (e: any) {
       console.error("Chat Error:", e);
-      const errStr = String(e).toLowerCase();
-      
-      if (errStr.includes("key") || errStr.includes("403") || errStr.includes("401") || errStr.includes("auth")) {
-        setApiErrorType('key');
-      } else {
-        setApiErrorType('network');
-      }
-      
-      const errorNote = "Mazarat! AI se rabta nahi ho pa raha. Dashboard mein 'VITE_GEMINI_API_KEY' check karein.";
+      const errorNote = "Mazarat! Service busy or unavailable. Check your API settings.";
       setSessions(prev => prev.map(s => s.id === sid ? { 
         ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorNote } : m)
       } : s));
@@ -152,7 +146,8 @@ const App: React.FC = () => {
       return;
     }
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const cleanText = text.replace(/[*#_]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = /[\u0600-\u06FF]/.test(text) ? 'ur-PK' : 'en-US';
     utterance.onend = () => setPlayingMessageId(null);
     setPlayingMessageId(id);
@@ -163,9 +158,10 @@ const App: React.FC = () => {
   if (!isOnline) return <OfflineNotice />;
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-white dark:bg-gray-950 transition-colors fixed inset-0 overflow-hidden font-sans">
+    <div className="flex flex-col h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 transition-colors fixed inset-0 overflow-hidden font-sans">
       <Header 
         isDark={isDark} isAutoSpeech={isAutoSpeech} isDeepThink={isDeepThink} isPremium={false}
+        appMode={appMode}
         toggleTheme={() => { 
           const nextDark = !isDark;
           setIsDark(nextDark); 
@@ -178,22 +174,7 @@ const App: React.FC = () => {
         onOpenPremium={() => {}}
       />
 
-      <main className="flex-1 flex flex-col relative overflow-hidden max-w-7xl mx-auto w-full">
-        {apiErrorType === 'key' && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm">
-            <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-top-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle size={20} />
-                <p className="text-xs font-bold uppercase tracking-wider">Configuration Issue</p>
-              </div>
-              <p className="text-[10px] opacity-90 leading-tight">Gemini API Key missing or invalid. Dashboard (Cloudflare/Vercel) mein VITE_GEMINI_API_KEY confirm karein.</p>
-              <button onClick={() => window.location.reload()} className="mt-2 bg-white/20 p-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2">
-                <RotateCcw size={12} /> Reload App
-              </button>
-            </div>
-          </div>
-        )}
-
+      <main className="flex-1 flex flex-col relative overflow-hidden max-w-7xl mx-auto w-full bg-white dark:bg-slate-950 shadow-xl">
         <MessageList 
           messages={currentMessages} 
           isLoading={isLoading}
@@ -214,6 +195,7 @@ const App: React.FC = () => {
           isListening={isListening}
           isLoading={isLoading}
           disabled={isLoading}
+          placeholderOverwrite={appMode === 'image' ? "Describe the image for SM AI Partner to paint..." : undefined}
         />
       </main>
 
