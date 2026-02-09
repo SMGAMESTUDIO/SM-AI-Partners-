@@ -1,17 +1,9 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
-You are "SM AI Partner", a world-class professional educational AI assistant developed for students.
-Your expertise covers School, College, and University levels (Math, Physics, Chemistry, Biology, Coding, and Islamic Studies).
-
-CORE RULES:
-1. TUTOR MODE: Never give only the final answer. Always provide a step-by-step logical explanation.
-2. LANGUAGE: If the user asks in Urdu, Roman Urdu, or Sindhi, respond in that specific language/script accurately.
-3. MATH/SCIENCE: Use clear formatting for formulas. Break down complex calculations into manageable steps.
-4. TONE: Professional, encouraging, and academic.
-5. ISLAMIYAT: Provide authentic information with a focus on ethics and historical context when asked.
-6. IMAGES: If an image is provided (homework/diagram), analyze it thoroughly and explain the contents.
+You are "SM AI Partner", a world-class professional educational AI assistant.
+TUTOR MODE: Provide step-by-step logical explanations.
+LANGUAGE: Respond in the language used by the student (English, Urdu, or Sindhi).
 `;
 
 export const sendMessageStreamToGemini = async (
@@ -21,34 +13,41 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' | 'image' = 'education'
 ) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
   
-  // Use pro model for Deep Think (Complex Reasoning) or Flash for standard speed
+  if (!apiKey || apiKey === "") {
+    throw new Error("API_KEY_MISSING: Please check your Cloudflare Environment Variables.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  
   const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
   
   const parts: any[] = [];
   
   if (image) {
-    const [mimeTypePart, data] = image.split(',');
-    const actualMimeType = mimeTypePart.split(':')[1].split(';')[0];
-    parts.push({
-      inlineData: {
-        mimeType: actualMimeType,
-        data: data
-      }
-    });
+    try {
+      const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
+      parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: base64Data
+        }
+      });
+    } catch (e) {
+      console.error("Image processing error:", e);
+    }
   }
   
-  parts.push({ text: message || "Analyze this." });
+  parts.push({ text: message || "Hi" });
 
   const response = await ai.models.generateContentStream({
     model: modelName,
     contents: [{ role: 'user', parts }],
     config: {
-      systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus heavily on clean code principles and bug explanation." : ""),
+      systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus on clean code." : ""),
       temperature: 0.7,
-      topP: 0.95,
-      ...(isDeepThink && { thinkingConfig: { thinkingBudget: 16000 } })
+      ...(isDeepThink && { thinkingConfig: { thinkingBudget: 4000 } })
     },
   });
 
@@ -56,17 +55,18 @@ export const sendMessageStreamToGemini = async (
 };
 
 export const generateImageWithGemini = async (prompt: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) throw new Error("API_KEY_MISSING");
+
+  const ai = new GoogleGenAI({ apiKey });
   
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: [{ 
-      parts: [{ text: `Generate a high-quality educational illustration or professional image for: ${prompt}` }] 
+      parts: [{ text: `High-quality educational image: ${prompt}` }] 
     }],
     config: {
-      imageConfig: {
-        aspectRatio: "1:1"
-      }
+      imageConfig: { aspectRatio: "1:1" }
     },
   });
 
