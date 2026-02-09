@@ -2,8 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   define: {
-    // Cloudflare dashboard mein variable ka naam 'API_KEY' hai.
-    // Hum isay process.env.API_KEY mein map kar rahe hain.
+    // Ye line dashboard wali API_KEY ko code mein shamil karti hai
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || process.env.VITE_GEMINI_API_KEY || ""),
   },
   build: {

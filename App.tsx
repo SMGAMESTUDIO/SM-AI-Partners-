@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -130,7 +129,13 @@ const App: React.FC = () => {
 
     } catch (e: any) {
       console.error("Chat Error:", e);
-      const errorNote = "Mazarat! Service busy or unavailable. Check your API settings.";
+      let errorNote = "Mazarat! Service busy or unavailable.";
+      if (e.message?.includes("API_KEY_MISSING")) {
+        errorNote = "Developer Alert: API_KEY is missing in Cloudflare settings!";
+      } else if (e.message?.includes("403")) {
+        errorNote = "Error: Invalid API Key. Please update your Gemini API Key.";
+      }
+      
       setSessions(prev => prev.map(s => s.id === sid ? { 
         ...s, messages: s.messages.map(m => m.id === aiId ? { ...m, text: errorNote } : m)
       } : s));
