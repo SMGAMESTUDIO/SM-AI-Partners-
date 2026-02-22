@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
+import Markdown from 'react-markdown';
 import { Message, MessageRole } from '../types';
 import { User, Volume2, VolumeX, Copy, Check, RotateCcw, BrainCircuit, BookOpen, Calculator, Atom, GraduationCap, ChevronRight } from 'lucide-react';
 import Logo from './Logo';
@@ -56,14 +57,11 @@ const MessageList: React.FC<MessageListProps> = ({
       );
     }
     
-    return text.split('\n').map((line, i) => {
-      const isStep = /^\d+\.|\*|-/.test(line.trim());
-      return (
-        <p key={i} className={`${line.trim() === '' ? 'h-3' : 'mb-2 last:mb-0'} ${isStep ? 'pl-2 border-l-2 border-blue-100 dark:border-blue-900/30 ml-1' : ''}`}>
-          {line}
-        </p>
-      );
-    });
+    return (
+      <div className="markdown-body prose prose-slate dark:prose-invert max-w-none">
+        <Markdown>{text}</Markdown>
+      </div>
+    );
   };
 
   return (

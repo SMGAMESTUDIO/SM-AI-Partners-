@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
 You are "SM AI Partner", a world-class professional educational AI assistant.
@@ -13,10 +13,10 @@ export const sendMessageStreamToGemini = async (
   image?: string,
   mode: 'education' | 'coding' | 'image' = 'education'
 ) => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   
   if (!apiKey || apiKey === "") {
-    throw new Error("API_KEY_MISSING: Please check your Cloudflare Environment Variables.");
+    throw new Error("API_KEY_MISSING: Please ensure GEMINI_API_KEY is set.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -47,7 +47,7 @@ export const sendMessageStreamToGemini = async (
     config: {
       systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus on clean code." : ""),
       temperature: 0.7,
-      ...(isDeepThink && { thinkingConfig: { thinkingBudget: 4000 } })
+      ...(isDeepThink && { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } })
     },
   });
 
@@ -55,7 +55,7 @@ export const sendMessageStreamToGemini = async (
 };
 
 export const generateImageWithGemini = async (prompt: string) => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("API_KEY_MISSING");
 
   const ai = new GoogleGenAI({ apiKey });
