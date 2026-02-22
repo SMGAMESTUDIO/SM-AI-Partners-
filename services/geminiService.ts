@@ -21,7 +21,8 @@ export const sendMessageStreamToGemini = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  const modelName = isDeepThink ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+  // Using gemini-2.0-flash as it is the most stable and widely available model
+  const modelName = isDeepThink ? 'gemini-2.0-flash-thinking-exp' : 'gemini-2.0-flash';
   
   const parts: any[] = [];
   
@@ -40,18 +41,22 @@ export const sendMessageStreamToGemini = async (
   }
   
   parts.push({ text: message || "Hi" });
-
-  const response = await ai.models.generateContentStream({
-    model: modelName,
-    contents: [{ role: 'user', parts }],
-    config: {
-      systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus on clean code." : ""),
-      temperature: 0.7,
-      ...(isDeepThink && { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } })
-    },
-  });
-
-  return response;
+  
+  try {
+    const response = await ai.models.generateContentStream({
+      model: modelName,
+      contents: { parts },
+      config: {
+        systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus on clean code." : ""),
+        temperature: 0.7,
+        ...(isDeepThink && { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } })
+      },
+    });
+    return response;
+  } catch (error: any) {
+    console.error("Gemini API Stream Error:", error);
+    throw error;
+  }
 };
 
 export const generateImageWithGemini = async (prompt: string) => {
@@ -61,10 +66,10 @@ export const generateImageWithGemini = async (prompt: string) => {
   const ai = new GoogleGenAI({ apiKey });
   
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: [{ 
-      parts: [{ text: `High-quality educational image: ${prompt}` }] 
-    }],
+    model: 'gemini-2.0-flash',
+    contents: { 
+      parts: [{ text: `Generate a high-quality educational illustration for: ${prompt}` }] 
+    },
     config: {
       imageConfig: { aspectRatio: "1:1" }
     },
