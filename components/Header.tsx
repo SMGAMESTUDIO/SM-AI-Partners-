@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Sun, Moon, Menu, Volume2, VolumeX, Brain, Code, GraduationCap, ImageIcon } from 'lucide-react';
+import { Sun, Moon, Menu, Volume2, VolumeX, Brain, Code, GraduationCap, ImageIcon, Star } from 'lucide-react';
 import Logo from './Logo';
 
 interface HeaderProps {
@@ -20,11 +20,13 @@ const Header: React.FC<HeaderProps> = ({
   isDark, 
   isAutoSpeech, 
   isDeepThink,
+  isPremium,
   appMode,
   toggleTheme, 
   toggleAutoSpeech, 
   toggleDeepThink,
   onOpenHistory,
+  onOpenPremium,
 }) => {
   const getModeIcon = () => {
     switch(appMode) {
@@ -75,6 +77,20 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-2.5">
+          <button
+            onClick={onOpenPremium}
+            className={`flex items-center justify-center p-1.5 md:px-3 md:py-1.5 rounded-lg md:rounded-xl border transition-all ${
+              isPremium 
+                ? 'bg-yellow-50 border-yellow-200 text-yellow-600 dark:bg-yellow-900/30 dark:border-yellow-800' 
+                : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 hover:border-blue-300'
+            }`}
+          >
+            <Star size={16} className={isPremium ? 'fill-yellow-500 text-yellow-500' : ''} />
+            <span className="hidden lg:inline text-[10px] font-black ml-2 uppercase tracking-widest">
+              {isPremium ? 'Premium' : 'Go Premium'}
+            </span>
+          </button>
+
           <button
             onClick={toggleDeepThink}
             className={`flex items-center justify-center p-1.5 md:px-3 md:py-1.5 rounded-lg md:rounded-xl border transition-all ${

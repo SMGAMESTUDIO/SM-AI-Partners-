@@ -98,7 +98,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
 
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-md leading-relaxed bg-white/50 dark:bg-slate-900/50 py-3 px-6 rounded-full border border-slate-100 dark:border-slate-800">
-            Welcome! I am ready to help with your studies. <span className="text-blue-600 font-bold ml-1">Kiya seekhna hai aaj?</span>
+            Welcome! I am your partner developed by <span className="text-blue-600 font-bold">SM Game Studio</span>. <span className="text-blue-600 font-bold ml-1">Kiya seekhna hai aaj?</span>
           </p>
         </div>
       )}

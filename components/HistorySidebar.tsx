@@ -126,12 +126,22 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
         <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
           <div className="p-4 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={14} className="text-blue-500 animate-pulse" />
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Developer Profile</p>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-blue-500 animate-pulse" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Developer Profile</p>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-500 text-[8px] font-black uppercase tracking-widest">Premium Partner</span>
             </div>
             
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100 mb-4 tracking-tight">SM GAMING STUDIO</p>
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-sm font-black text-gray-900 dark:text-gray-100 tracking-tight">SM GAME STUDIO</p>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">CEO: SM</p>
+              </div>
+              <p className="text-[8px] text-slate-400 font-medium mt-1">Advancing Education through AI Innovation.</p>
+            </div>
             
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -155,7 +165,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
           </div>
           
           <p className="text-center text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 dark:text-gray-700 mt-4 select-none">
-            Advancing Education
+            Advancing Education • SM Game Studio
           </p>
         </div>
       </div>

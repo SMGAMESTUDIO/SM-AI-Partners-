@@ -26,7 +26,7 @@ const SplashScreen: React.FC = () => {
           </h1>
           <div className="flex items-center justify-center gap-2 animate-in fade-in duration-1000 delay-700">
             <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-blue-500"></div>
-            <span className="text-[10px] text-blue-400 font-bold uppercase tracking-[0.5em]">Advancing Education</span>
+            <span className="text-[10px] text-blue-400 font-bold uppercase tracking-[0.5em]">SM Game Studio</span>
             <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-blue-500"></div>
           </div>
         </div>

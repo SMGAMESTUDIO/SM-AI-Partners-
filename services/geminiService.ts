@@ -2,8 +2,14 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 const EDUCATION_INSTRUCTION = `
 You are "SM AI Partner", a world-class professional educational AI assistant.
+DEVELOPER INFO:
+- Developed by: SM Game Studio
+- CEO: SM
+- Mission: Advancing Education through AI.
+
 TUTOR MODE: Provide step-by-step logical explanations.
 LANGUAGE: Respond in the language used by the student (English, Urdu, or Sindhi).
+PREMIUM STATUS: If the user is a Premium member, provide more detailed, priority, and highly accurate academic responses.
 `;
 
 export const sendMessageStreamToGemini = async (
@@ -11,11 +17,14 @@ export const sendMessageStreamToGemini = async (
   history: any[] = [],
   isDeepThink: boolean = false,
   image?: string,
-  mode: 'education' | 'coding' | 'image' = 'education'
+  mode: 'education' | 'coding' | 'image' = 'education',
+  isPremium: boolean = false
 ) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const rawKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  const apiKey = rawKey?.trim();
   
   if (!apiKey || apiKey === "") {
+    console.error("SM AI Partner: API Key is missing or empty!");
     throw new Error("API_KEY_MISSING: Please ensure GEMINI_API_KEY is set.");
   }
 
@@ -47,7 +56,9 @@ export const sendMessageStreamToGemini = async (
       model: modelName,
       contents: { parts },
       config: {
-        systemInstruction: EDUCATION_INSTRUCTION + (mode === 'coding' ? "\nFocus on clean code." : ""),
+        systemInstruction: EDUCATION_INSTRUCTION + 
+          (mode === 'coding' ? "\nFocus on clean code." : "") +
+          (isPremium ? "\nUSER IS PREMIUM: Provide elite, detailed academic support." : ""),
         temperature: 0.7,
         ...(isDeepThink && { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } })
       },

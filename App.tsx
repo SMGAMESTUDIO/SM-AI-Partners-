@@ -6,6 +6,7 @@ import TypewriterInput from './components/TypewriterInput';
 import HistorySidebar from './components/HistorySidebar';
 import SplashScreen from './components/SplashScreen';
 import OfflineNotice from './components/OfflineNotice';
+import PremiumModal from './components/PremiumModal';
 import { sendMessageStreamToGemini, generateImageWithGemini } from './services/geminiService';
 import { Message, MessageRole, ChatSession } from './types';
 
@@ -17,6 +18,8 @@ const App: React.FC = () => {
   const [isDark, setIsDark] = useState(false);
   const [isAutoSpeech, setIsAutoSpeech] = useState(false);
   const [isDeepThink, setIsDeepThink] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [appMode, setAppMode] = useState<'education' | 'coding' | 'image'>('education');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -107,7 +110,8 @@ const App: React.FC = () => {
           [], 
           isDeepThink, 
           image, 
-          appMode
+          appMode,
+          isPremium
         );
         
         let fullText = "";
@@ -165,7 +169,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 transition-colors fixed inset-0 overflow-hidden font-sans">
       <Header 
-        isDark={isDark} isAutoSpeech={isAutoSpeech} isDeepThink={isDeepThink} isPremium={false}
+        isDark={isDark} isAutoSpeech={isAutoSpeech} isDeepThink={isDeepThink} isPremium={isPremium}
         appMode={appMode}
         toggleTheme={() => { 
           const nextDark = !isDark;
@@ -176,7 +180,7 @@ const App: React.FC = () => {
         toggleAutoSpeech={() => setIsAutoSpeech(!isAutoSpeech)}
         toggleDeepThink={() => setIsDeepThink(!isDeepThink)}
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenPremium={() => {}}
+        onOpenPremium={() => setShowPremiumModal(true)}
       />
 
       <main className="flex-1 flex flex-col relative overflow-hidden max-w-7xl mx-auto w-full bg-white dark:bg-slate-950 shadow-xl">
@@ -220,6 +224,16 @@ const App: React.FC = () => {
       />
       
       <Footer />
+      
+      {showPremiumModal && (
+        <PremiumModal 
+          onClose={() => setShowPremiumModal(false)} 
+          onUpgrade={() => {
+            setIsPremium(true);
+            setShowPremiumModal(false);
+          }}
+        />
+      )}
     </div>
   );
 };
