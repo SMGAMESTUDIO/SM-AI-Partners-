@@ -133,11 +133,12 @@ const App: React.FC = () => {
 
     } catch (e: any) {
       console.error("Chat Error:", e);
-      let errorNote = "Mazarat! Service busy or unavailable.";
+      let errorNote = "Mazarat! AI se rabta nahi ho pa raha. Dashboard mein 'VITE_GEMINI_API_KEY' check karein.";
+      
       if (e.message?.includes("API_KEY_MISSING")) {
-        errorNote = "Developer Alert: API_KEY is missing in Cloudflare settings!";
-      } else if (e.message?.includes("403")) {
-        errorNote = "Error: Invalid API Key. Please update your Gemini API Key.";
+        errorNote = "Mazarat! API Key missing hai. Vercel Dashboard ya .env mein VITE_GEMINI_API_KEY add karein.";
+      } else if (e.message?.includes("403") || e.message?.includes("API_KEY_INVALID")) {
+        errorNote = "Error: Invalid API Key. Please update your Gemini API Key in Vercel settings.";
       }
       
       setSessions(prev => prev.map(s => s.id === sid ? { 

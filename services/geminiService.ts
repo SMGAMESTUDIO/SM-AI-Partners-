@@ -24,9 +24,12 @@ export const sendMessageStreamToGemini = async (
   const apiKey = rawKey?.trim();
   
   if (!apiKey || apiKey === "") {
-    console.error("SM AI Partner: API Key is missing or empty!");
-    throw new Error("API_KEY_MISSING: Please ensure GEMINI_API_KEY is set.");
+    console.error("SM AI Partner: API Key is missing or empty! Check Vercel Dashboard.");
+    throw new Error("API_KEY_MISSING");
   }
+
+  // Safe debug log: only show first 5 chars
+  console.log(`SM AI Partner: API Key loaded (starts with: ${apiKey.substring(0, 5)}...)`);
 
   const ai = new GoogleGenAI({ apiKey });
   
