@@ -30,8 +30,8 @@ export const sendMessageStreamToGemini = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // Using gemini-2.0-flash as it is the most stable and widely available model
-  const modelName = isDeepThink ? 'gemini-2.0-flash-thinking-exp' : 'gemini-2.0-flash';
+  // Using gemini-3 series as per latest guidelines
+  const modelName = isDeepThink ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
   
   const parts: any[] = [];
   
@@ -60,6 +60,7 @@ export const sendMessageStreamToGemini = async (
           (mode === 'coding' ? "\nFocus on clean code." : "") +
           (isPremium ? "\nUSER IS PREMIUM: Provide elite, detailed academic support." : ""),
         temperature: 0.7,
+        tools: [{ googleSearch: {} }],
         ...(isDeepThink && { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } })
       },
     });
@@ -71,13 +72,14 @@ export const sendMessageStreamToGemini = async (
 };
 
 export const generateImageWithGemini = async (prompt: string) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const rawKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  const apiKey = rawKey?.trim();
   if (!apiKey) throw new Error("API_KEY_MISSING");
 
   const ai = new GoogleGenAI({ apiKey });
   
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash-image',
     contents: { 
       parts: [{ text: `Generate a high-quality educational illustration for: ${prompt}` }] 
     },
